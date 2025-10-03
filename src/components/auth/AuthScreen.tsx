@@ -12,6 +12,7 @@ import { Activity, Brain, Target, Users, Award, TrendingUp } from 'lucide-react'
 const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL === 'demo');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,6 +21,14 @@ const AuthScreen: React.FC = () => {
     coach_id: ''
   });
 
+  const handleDemoLogin = () => {
+    setLoading(true);
+    // Simulate demo login
+    setTimeout(() => {
+      setLoading(false);
+      // The App component will handle demo mode automatically
+    }, 1000);
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -122,6 +131,13 @@ const AuthScreen: React.FC = () => {
         {/* Auth Form */}
         <Card className="w-full max-w-md mx-auto shadow-2xl border-0">
           <CardHeader className="text-center space-y-2">
+            {isDemoMode && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  🚀 <strong>Modo Demo</strong> - Explore todas as funcionalidades sem configuração
+                </p>
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-gray-900">
               {isLogin ? 'Entrar na Plataforma' : 'Criar Conta'}
             </h2>
@@ -131,6 +147,29 @@ const AuthScreen: React.FC = () => {
           </CardHeader>
           
           <CardContent>
+            {isDemoMode && (
+              <div className="mb-6">
+                <Button
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  className="w-full py-3 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600"
+                  size="lg"
+                >
+                  {loading ? 'Carregando Demo...' : '🚀 Entrar no Modo Demo'}
+                </Button>
+                <div className="mt-4 text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">ou use suas credenciais</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <>
