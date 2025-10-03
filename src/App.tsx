@@ -18,32 +18,63 @@ function App() {
 
   useEffect(() => {
     // Verificar sessão atual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      });
+    } else {
+      // Demo mode - simulate logged in user
+      const demoUser = {
+        id: 'demo-user-123',
+        email: 'demo@synthonia.ai',
+        name: 'Usuário Demo',
+        role: 'athlete' as const,
+        created_at: new Date().toISOString(),
+        avatar_url: null
+      };
+      setUser(demoUser as any);
+      setUserProfile(demoUser);
+      setLoading(false);
+    }
 
     // Escutar mudanças de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
-        setLoading(false);
-      }
-    });
+    if (supabase) {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+          setLoading(false);
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    if (!supabase) {
+      // Demo mode
+      setUserProfile({
+        id: 'demo-user-123',
+        email: 'demo@synthonia.ai',
+        name: 'Usuário Demo',
+        role: 'athlete',
+        created_at: new Date().toISOString(),
+        avatar_url: null
+      });
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('users')
