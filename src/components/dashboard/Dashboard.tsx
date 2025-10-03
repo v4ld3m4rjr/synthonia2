@@ -66,7 +66,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    } else {
+      // Demo mode - just reload the page
+      window.location.reload();
+    }
   };
 
   if (loading) {
