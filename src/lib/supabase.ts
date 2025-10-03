@@ -19,22 +19,40 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Database utility functions
 export const authHelpers = {
   async signUp(email: string, password: string, userData: any) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
-      }
-    });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData
+        }
+      });
+      return { data, error };
+    } catch (networkError) {
+      return { 
+        data: null, 
+        error: { 
+          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.' 
+        } 
+      };
+    }
   },
 
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      return { data, error };
+    } catch (networkError) {
+      return { 
+        data: null, 
+        error: { 
+          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.' 
+        } 
+      };
+    }
   },
 
   async signOut() {

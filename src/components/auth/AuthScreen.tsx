@@ -28,7 +28,11 @@ const AuthScreen: React.FC = () => {
       if (isLogin) {
         const { error } = await authHelpers.signIn(formData.email, formData.password);
         if (error) {
-          alert('Erro ao fazer login: ' + error.message);
+          if (error.message.includes('conexão')) {
+            alert('❌ ' + error.message + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
+          } else {
+            alert('Erro ao fazer login: ' + error.message);
+          }
         }
       } else {
         const { error } = await authHelpers.signUp(formData.email, formData.password, {
@@ -37,7 +41,11 @@ const AuthScreen: React.FC = () => {
           coach_id: formData.coach_id || null
         });
         if (error) {
-          alert('Erro ao criar conta: ' + error.message);
+          if (error.message.includes('conexão')) {
+            alert('❌ ' + error.message + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
+          } else {
+            alert('Erro ao criar conta: ' + error.message);
+          }
         } else {
           alert('Conta criada com sucesso! Verifique seu email.');
         }
