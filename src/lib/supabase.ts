@@ -3,84 +3,30 @@
 // Gerado por: Cursor AI
 // Versão: Supabase 2.57.4
 // AI_GENERATED_CODE_START
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '../types';
 
 // Configuração do Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check if we're in demo mode (no Supabase config)
-const isDemoMode = false;
+// Verificação de configuração: evita erro de criação do cliente com variáveis indefinidas
+export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Demo user data
-// const demoUser = {
-//   id: 'demo-user-123',
-//   email: 'demo@synthonia.ai',
-//   name: 'Usuário Demo',
-//   role: 'athlete' as const,
-//   created_at: new Date().toISOString(),
-//   avatar_url: null
-// };
-
-// Demo daily data
-// const generateDemoData = () => {
-//   const data = [];
-//   for (let i = 30; i >= 0; i--) {
-//     const date = new Date();
-//     date.setDate(date.getDate() - i);
-//     data.push({
-//       id: `demo-daily-${i}`,
-//       user_id: demoUser.id,
-//       date: date.toISOString().split('T')[0],
-//       sleep_quality: Math.floor(Math.random() * 4) + 6,
-//       fatigue_level: Math.floor(Math.random() * 4) + 3,
-//       mood: Math.floor(Math.random() * 3) + 7,
-//       muscle_soreness: Math.floor(Math.random() * 5) + 2,
-//       stress_level: Math.floor(Math.random() * 4) + 2,
-//       resting_hr: Math.floor(Math.random() * 20) + 55,
-//       hrv: Math.floor(Math.random() * 20) + 30,
-//       readiness_score: Math.floor(Math.random() * 40) + 50,
-//       created_at: date.toISOString()
-//     });
-//   }
-//   return data;
-// };
-
-// Demo training sessions
-// const generateDemoTrainingSessions = () => {
-//   const sessions = [];
-//   for (let i = 25; i >= 0; i -= 2) {
-//     const date = new Date();
-//     date.setDate(date.getDate() - i);
-//     sessions.push({
-//       id: `demo-training-${i}`,
-//       user_id: demoUser.id,
-//       date: date.toISOString().split('T')[0],
-//       duration: Math.floor(Math.random() * 60) + 45,
-//       rpe: Math.floor(Math.random() * 4) + 6,
-//       training_type: ['Musculação', 'Corrida', 'Ciclismo', 'Natação', 'Funcional'][Math.floor(Math.random() * 5)],
-//       tss: Math.floor(Math.random() * 80) + 40,
-//       notes: 'Treino demo gerado automaticamente',
-//       created_at: date.toISOString()
-//     });
-//   }
-//   return sessions;
-// };
-// Database utility functions
+// Helpers de Autenticação
 export const authHelpers = {
   async signUp(email: string, password: string, userData: any) {
-    if (isDemoMode) {
-      return { 
-        data: { user: demoUser }, 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    
+
     try {
-      const { data, error } = await (supabase as any).auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -89,65 +35,66 @@ export const authHelpers = {
       });
       return { data, error };
     } catch (networkError) {
-      return { 
-        data: null, 
-        error: { 
-          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.' 
-        } 
+      return {
+        data: null,
+        error: {
+          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.'
+        }
       };
     }
   },
 
   async signIn(email: string, password: string) {
-    if (isDemoMode) {
-      return { 
-        data: { user: demoUser }, 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    
+
     try {
-      const { data, error } = await (supabase as any).auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       return { data, error };
     } catch (networkError) {
-      return { 
-        data: null, 
-        error: { 
-          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.' 
-        } 
+      return {
+        data: null,
+        error: {
+          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.'
+        }
       };
     }
   },
 
   async signOut() {
-    if (isDemoMode) {
-      return { error: null };
+    if (!supabase) {
+      return { error: { message: 'Supabase não configurado.' } };
     }
-    const { error } = await (supabase as any).auth.signOut();
+    const { error } = await supabase.auth.signOut();
     return { error };
   },
 
   async getCurrentUser() {
-    if (isDemoMode) {
-      return demoUser;
+    if (!supabase) {
+      return null;
     }
-    const { data: { user } } = await (supabase as any).auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     return user;
   }
 };
 
+// Helpers de Banco de Dados
 export const dbHelpers = {
   async insertDailyData(data: any) {
-    if (isDemoMode) {
-      return { 
-        data: [{ id: `demo-${Date.now()}`, ...data }], 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    const { data: result, error } = await (supabase as any)
+    const { data: result, error } = await supabase
       .from('daily_data')
       .insert([{
         date: data.date,
@@ -170,13 +117,13 @@ export const dbHelpers = {
   },
 
   async getDailyData(userId: string, days: number = 30) {
-    if (isDemoMode) {
-      return { 
-        data: generateDemoData(), 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('daily_data')
       .select('*')
       .eq('user_id', userId)
@@ -186,13 +133,13 @@ export const dbHelpers = {
   },
 
   async insertTrainingSession(session: any) {
-    if (isDemoMode) {
-      return { 
-        data: [{ id: `demo-training-${Date.now()}`, ...session }], 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    const { data: result, error } = await (supabase as any)
+    const { data: result, error } = await supabase
       .from('training_sessions')
       .insert([{
         date: session.date,
@@ -211,13 +158,13 @@ export const dbHelpers = {
   },
 
   async getTrainingSessions(userId: string, days: number = 30) {
-    if (isDemoMode) {
-      return { 
-        data: generateDemoTrainingSessions(), 
-        error: null 
+    if (!supabase) {
+      return {
+        data: null,
+        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
       };
     }
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('training_sessions')
       .select('*')
       .eq('user_id', userId)
@@ -227,8 +174,8 @@ export const dbHelpers = {
   },
 
   async updateUserProfile(updates: Partial<User> & { id: string }) {
-    if (isDemoMode) {
-      return { data: [{ ...updates }], error: null };
+    if (!supabase) {
+      return { data: null, error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' } };
     }
     const payload: any = {
       id: updates.id,
@@ -240,7 +187,7 @@ export const dbHelpers = {
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'id' })
       .select();

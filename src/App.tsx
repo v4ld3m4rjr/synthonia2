@@ -5,7 +5,7 @@
 // AI_GENERATED_CODE_START
 import React, { useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from './lib/supabase';
+import { supabase, authHelpers } from './lib/supabase';
 import { User } from './types';
 import AuthScreen from './components/auth/AuthScreen';
 import Dashboard from './components/dashboard/Dashboard';
@@ -86,7 +86,7 @@ function App() {
     }
   }
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await authHelpers.signOut();
   };
 
   if (loading) {

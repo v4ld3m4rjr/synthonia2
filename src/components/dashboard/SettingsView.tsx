@@ -51,7 +51,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onProfileSave }) => {
     const file = e.target.files?.[0] || null;
     if (!file) return;
     setAvatarFile(file);
-
+  
+    // Impede crash quando Supabase não está configurado
+    if (!supabase) {
+      alert('Upload indisponível: Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY ou informe manualmente a URL do avatar.');
+      const blobUrl = URL.createObjectURL(file); // preview local (não persiste)
+      setProfileData(prev => ({ ...prev, avatar_url: blobUrl }));
+      onProfileSave?.({ avatar_url: blobUrl });
+      return;
+    }
+  
     try {
       const fileExt = file.name.split('.').pop();
       const filePath = `avatars/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
