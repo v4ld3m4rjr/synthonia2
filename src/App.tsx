@@ -15,6 +15,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   useEffect(() => {
     // Verificar sessão atual
@@ -28,17 +29,19 @@ function App() {
         }
       });
     } else {
-      // Demo mode - simulate logged in user
-      const demoUser = {
-        id: 'demo-user-123',
-        email: 'demo@synthonia.ai',
-        name: 'Usuário Demo',
-        role: 'athlete' as const,
-        created_at: new Date().toISOString(),
-        avatar_url: null
-      };
-      setUser(demoUser as any);
-      setUserProfile(demoUser);
+      // Demo mode - simulate logged in user only if not logged out
+      if (!isLoggedOut) {
+        const demoUser = {
+          id: 'demo-user-123',
+          email: 'demo@synthonia.ai',
+          name: 'Usuário Demo',
+          role: 'athlete' as const,
+          created_at: new Date().toISOString(),
+          avatar_url: null
+        };
+        setUser(demoUser as any);
+        setUserProfile(demoUser);
+      }
       setLoading(false);
     }
 
@@ -83,20 +86,48 @@ function App() {
         .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
+        // Fallback silencioso caso a tabela 'users' não exista (PGRST205) ou outro erro de leitura
+        const authUser = user;
+        setUserProfile({
+          id: authUser?.id || userId,
+          email: authUser?.email || '',
+          name: (authUser as any)?.user_metadata?.name || 'Usuário',
+          role: 'athlete',
+          created_at: new Date().toISOString(),
+          avatar_url: (authUser as any)?.user_metadata?.avatar_url || null
+        } as any);
       } else {
-        setUserProfile(data);
+        setUserProfile(data as any);
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (_err) {
+      // Fallback em caso de exceção inesperada
+      const authUser = user;
+      setUserProfile({
+        id: authUser?.id || userId,
+        email: authUser?.email || '',
+        name: (authUser as any)?.user_metadata?.name || 'Usuário',
+        role: 'athlete',
+        created_at: new Date().toISOString(),
+        avatar_url: (authUser as any)?.user_metadata?.avatar_url || null
+      } as any);
     } finally {
       setLoading(false);
+    }
+  }
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    } else {
+      // Demo mode - clear user state
+      setUser(null);
+      setUserProfile(null);
+      setIsLoggedOut(true);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
@@ -107,8 +138,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Dashboard user={userProfile} />
+    <div className="min-h-screen" style={{ backgroundColor: '#001a33' }}>
+      <Dashboard user={userProfile} onLogout={handleLogout} />
     </div>
   );
 }

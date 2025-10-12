@@ -4,7 +4,7 @@
 // Versão: React 18.3.1
 // AI_GENERATED_CODE_START
 import React from 'react';
-import { LineChart } from '../charts/LineChart';
+import { LineChart } from '../charts';
 
 interface DataPoint {
   x: string;
@@ -33,9 +33,8 @@ const TrainingChart: React.FC<TrainingChartProps> = ({
     );
   }
 
-  // Processar dados para últimos 14 pontos
+  // Processar dados (usar todos os dados fornecidos)
   const processedData = data
-    .slice(-14)
     .map(point => ({
       x: new Date(point.x).toLocaleDateString('pt-BR', { 
         day: '2-digit', 
@@ -47,14 +46,16 @@ const TrainingChart: React.FC<TrainingChartProps> = ({
   return (
     <div className="w-full">
       <h4 className="text-sm font-medium text-gray-700 mb-4">{title}</h4>
-      <LineChart 
-        data={processedData}
-        width={400}
-        height={200}
-        color={color}
-        showGrid={true}
-        showDots={true}
-      />
+      <div className="w-full">
+        <LineChart 
+          data={processedData}
+          width="100%"
+          height={200}
+          color={color}
+          showGrid={true}
+          showDots={true}
+        />
+      </div>
     </div>
   );
 };

@@ -4,12 +4,22 @@
 // Versão: Supabase 2.57.4
 // AI_GENERATED_CODE_START
 import { createClient } from '@supabase/supabase-js';
+import type { User } from '../types';
 
+// Configuração do Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Check if we're in demo mode (no Supabase config)
-const isDemoMode = !supabaseUrl || !supabaseAnonKey || supabaseUrl === 'demo' || supabaseAnonKey === 'demo';
+const isDemoMode = !supabaseUrl || 
+                   !supabaseAnonKey || 
+                   supabaseUrl === 'demo' || 
+                   supabaseAnonKey === 'demo' ||
+                   supabaseUrl === 'your_supabase_project_url' ||
+                   supabaseAnonKey === 'your_supabase_anon_key' ||
+                   // Tratar valores padrão de demo como modo demo
+                   supabaseUrl === 'https://demo.supabase.co' ||
+                   supabaseAnonKey === 'demo-key';
 
 export const supabase = isDemoMode 
   ? null 
@@ -80,7 +90,7 @@ export const authHelpers = {
     }
     
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await (supabase as any).auth.signUp({
         email,
         password,
         options: {
@@ -107,7 +117,7 @@ export const authHelpers = {
     }
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await (supabase as any).auth.signInWithPassword({
         email,
         password
       });
@@ -126,7 +136,7 @@ export const authHelpers = {
     if (isDemoMode) {
       return { error: null };
     }
-    const { error } = await supabase.auth.signOut();
+    const { error } = await (supabase as any).auth.signOut();
     return { error };
   },
 
@@ -134,23 +144,37 @@ export const authHelpers = {
     if (isDemoMode) {
       return demoUser;
     }
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await (supabase as any).auth.getUser();
     return user;
   }
 };
 
 export const dbHelpers = {
-  async insertDailyData(data: Partial<any>) {
+  async insertDailyData(data: any) {
     if (isDemoMode) {
       return { 
-        data: [{ ...data, id: `demo-${Date.now()}` }], 
+        data: [{ id: `demo-${Date.now()}`, ...data }], 
         error: null 
       };
     }
-    
-    const { data: result, error } = await supabase
+    const { data: result, error } = await (supabase as any)
       .from('daily_data')
-      .insert([data])
+      .insert([{
+        date: data.date,
+        sleep_quality: data.sleep_quality,
+        fatigue_level: data.fatigue_level,
+        mood: data.mood,
+        muscle_soreness: data.muscle_soreness,
+        stress_level: data.stress_level,
+        resting_hr: data.resting_hr ?? null,
+        hrv: data.hrv ?? null,
+        tqr: data.tqr ?? null,
+        psr: data.psr ?? null,
+        sleep_duration: data.sleep_duration ?? null,
+        sleep_regularity: data.sleep_regularity ?? null,
+        exhaustion: data.exhaustion ?? null,
+        readiness_score: data.readiness_score ?? null,
+      }])
       .select();
     return { data: result, error };
   },
@@ -162,8 +186,7 @@ export const dbHelpers = {
         error: null 
       };
     }
-    
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('daily_data')
       .select('*')
       .eq('user_id', userId)
@@ -172,17 +195,27 @@ export const dbHelpers = {
     return { data, error };
   },
 
-  async insertTrainingSession(data: Partial<any>) {
+  async insertTrainingSession(session: any) {
     if (isDemoMode) {
       return { 
-        data: [{ ...data, id: `demo-training-${Date.now()}` }], 
+        data: [{ id: `demo-training-${Date.now()}`, ...session }], 
         error: null 
       };
     }
-    
-    const { data: result, error } = await supabase
+    const { data: result, error } = await (supabase as any)
       .from('training_sessions')
-      .insert([data])
+      .insert([{
+        date: session.date,
+        duration: session.duration,
+        rpe: session.rpe,
+        training_type: session.training_type,
+        volume: session.volume ?? null,
+        intensity: session.intensity ?? null,
+        tss: session.tss ?? 0,
+        trimp: session.trimp ?? 0,
+        pse: session.pse ?? null,
+        notes: session.notes ?? null,
+      }])
       .select();
     return { data: result, error };
   },
@@ -194,13 +227,34 @@ export const dbHelpers = {
         error: null 
       };
     }
-    
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .select('*')
       .eq('user_id', userId)
       .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
       .order('date', { ascending: false });
+    return { data, error };
+  },
+
+  async updateUserProfile(updates: Partial<User> & { id: string }) {
+    if (isDemoMode) {
+      return { data: [{ ...updates }], error: null };
+    }
+    const payload: any = {
+      id: updates.id,
+      name: updates.name,
+      email: updates.email,
+      birth_date: updates.birth_date,
+      role: updates.role,
+      avatar_url: updates.avatar_url,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await (supabase as any)
+      .from('users')
+      .upsert(payload, { onConflict: 'id' })
+      .select();
+
     return { data, error };
   }
 };

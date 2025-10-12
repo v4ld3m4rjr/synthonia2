@@ -16,7 +16,7 @@ export const Card: React.FC<CardProps> = ({
   className = '', 
   hoverable = false 
 }) => {
-  const baseClasses = 'bg-white rounded-xl shadow-sm border border-gray-100';
+  const baseClasses = 'bg-gray-800 rounded-xl shadow-sm border border-gray-700';
   const hoverClasses = hoverable ? 'hover:shadow-md transition-shadow duration-200' : '';
   
   return (
@@ -33,7 +33,7 @@ interface CardHeaderProps {
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
   return (
-    <div className={`px-6 py-4 border-b border-gray-100 ${className}`}>
+    <div className={`px-6 py-4 border-b border-gray-700 ${className}`}>
       {children}
     </div>
   );

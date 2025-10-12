@@ -52,6 +52,7 @@ export function calculateTrainingMetrics(
   trainingSessions: TrainingSession[],
   targetDate: string
 ): TrainingMetrics {
+  
   const targetDateTime = new Date(targetDate);
   
   // Filtrar sessões até a data alvo
@@ -59,6 +60,7 @@ export function calculateTrainingMetrics(
     .filter(session => new Date(session.date) <= targetDateTime)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  
   if (relevantSessions.length === 0) {
     return {
       date: targetDate,
@@ -196,6 +198,14 @@ export function calculateMetricsTimeSeries(
   monotony: number;
   strain: number;
 }> {
+  if (import.meta.env.DEV) {
+    console.debug('🔢 calculateMetricsTimeSeries - Iniciando cálculo', {
+      trainingSessionsCount: trainingSessions?.length,
+      days,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   const result = [];
   const endDate = new Date();
   
@@ -208,6 +218,15 @@ export function calculateMetricsTimeSeries(
     result.push({
       date: dateString,
       ...metrics
+    });
+  }
+  
+  if (import.meta.env.DEV) {
+    console.debug('✅ calculateMetricsTimeSeries - Cálculo concluído', {
+      resultLength: result.length,
+      firstResult: result[0],
+      lastResult: result[result.length - 1],
+      timestamp: new Date().toISOString()
     });
   }
   

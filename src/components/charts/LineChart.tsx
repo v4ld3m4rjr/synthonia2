@@ -1,9 +1,4 @@
-// [AI Generated] Data: 19/01/2025
-// Descrição: Componente de gráfico de linha usando Canvas API
-// Gerado por: Cursor AI
-// Versão: React 18.3.1 com Canvas nativo
-// AI_GENERATED_CODE_START
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 interface DataPoint {
   x: string;
@@ -12,71 +7,96 @@ interface DataPoint {
 
 interface LineChartProps {
   data: DataPoint[];
-  width?: number;
+  width?: number | string;
   height?: number;
   color?: string;
   strokeWidth?: number;
   showGrid?: boolean;
   showDots?: boolean;
+  darkTheme?: boolean;
 }
 
-export const LineChart: React.FC<LineChartProps> = ({
+function LineChart({
   data,
-  width = 400,
-  height = 200,
-  color = '#3B82F6',
-  strokeWidth = 3,
+  width = '100%',
+  height = 300,
+  color = '#3b82f6',
+  strokeWidth = 2,
   showGrid = true,
-  showDots = true
-}) => {
+  showDots = true,
+  darkTheme = false
+}: LineChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !data.length) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Configurar alta resolução
+    const validData = data.filter(d =>
+      d &&
+      typeof d.y === 'number' &&
+      isFinite(d.y) &&
+      !isNaN(d.y) &&
+      d.x !== undefined &&
+      d.x !== null
+    );
+
+    const actualWidth = typeof width === 'string' ? container.offsetWidth : width;
+    const actualHeight = height;
+
+    if (actualWidth <= 0 || actualHeight <= 0) {
+      if (import.meta.env.DEV) {
+        console.warn('LineChart - Dimensões inválidas:', { actualWidth, actualHeight });
+      }
+      return;
+    }
+
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    canvas.width = (actualWidth as number) * dpr;
+    canvas.height = actualHeight * dpr;
+    canvas.style.width = `${actualWidth}px`;
+    canvas.style.height = `${actualHeight}px`;
     ctx.scale(dpr, dpr);
 
-    // Limpar canvas
-    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = darkTheme ? '#111827' : '#ffffff';
+    ctx.fillRect(0, 0, actualWidth as number, actualHeight);
 
-    // Padding para o gráfico
     const padding = 40;
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
+    const chartWidth = (actualWidth as number) - 2 * padding;
+    const chartHeight = actualHeight - 2 * padding;
 
-    // Encontrar min/max values
-    const yValues = data.map(d => d.y);
+    if (validData.length === 0) {
+      ctx.fillStyle = darkTheme ? '#9CA3AF' : '#6B7280';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Sem dados válidos para exibir', actualWidth / 2, actualHeight / 2);
+      return;
+    }
+
+    const yValues = validData.map(d => d.y);
     const minY = Math.min(...yValues);
     const maxY = Math.max(...yValues);
     const yRange = maxY - minY || 1;
 
-    // Desenhar grid
     if (showGrid) {
-      ctx.strokeStyle = '#E5E7EB';
+      ctx.strokeStyle = darkTheme ? '#374151' : '#E5E7EB';
       ctx.lineWidth = 1;
-      
-      // Linhas horizontais
-      for (let i = 0; i <= 4; i++) {
-        const y = padding + (chartHeight / 4) * i;
+      for (let i = 0; i <= 5; i++) {
+        const y = padding + (chartHeight * i) / 5;
         ctx.beginPath();
         ctx.moveTo(padding, y);
         ctx.lineTo(padding + chartWidth, y);
         ctx.stroke();
       }
-      
-      // Linhas verticais
-      const stepX = chartWidth / (data.length - 1);
-      for (let i = 0; i < data.length; i++) {
-        const x = padding + stepX * i;
+      for (let i = 0; i <= 5; i++) {
+        const x = padding + (chartWidth * i) / 5;
         ctx.beginPath();
         ctx.moveTo(x, padding);
         ctx.lineTo(x, padding + chartHeight);
@@ -84,67 +104,74 @@ export const LineChart: React.FC<LineChartProps> = ({
       }
     }
 
-    // Desenhar linha
-    ctx.strokeStyle = color;
-    ctx.lineWidth = strokeWidth;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    if (validData.length > 1) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = strokeWidth;
+      ctx.beginPath();
+      validData.forEach((point, index) => {
+        const x = padding + (chartWidth * index) / (validData.length - 1);
+        const y = padding + chartHeight - ((point.y - minY) / yRange) * chartHeight;
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+    }
 
-    ctx.beginPath();
-    data.forEach((point, index) => {
-      const x = padding + (chartWidth / (data.length - 1)) * index;
-      const y = padding + chartHeight - ((point.y - minY) / yRange) * chartHeight;
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.stroke();
-
-    // Desenhar pontos
     if (showDots) {
       ctx.fillStyle = color;
-      data.forEach((point, index) => {
-        const x = padding + (chartWidth / (data.length - 1)) * index;
+      validData.forEach((point, index) => {
+        const x = padding + (chartWidth * index) / (validData.length - 1);
         const y = padding + chartHeight - ((point.y - minY) / yRange) * chartHeight;
-        
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, 2 * Math.PI);
         ctx.fill();
-        
-        // Ponto branco no centro
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = color;
       });
     }
+  }, [data, width, height, color, strokeWidth, showGrid, showDots, darkTheme, containerWidth]);
 
-    // Labels do eixo Y
-    ctx.fillStyle = '#6B7280';
-    ctx.font = '12px Inter, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    
-    for (let i = 0; i <= 4; i++) {
-      const y = padding + (chartHeight / 4) * i;
-      const value = maxY - (yRange / 4) * i;
-      ctx.fillText(Math.round(value).toString(), padding - 10, y);
-    }
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  }, [data, width, height, color, strokeWidth, showGrid, showDots]);
+    // Inicializa com a largura atual
+    setContainerWidth(container.offsetWidth);
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newWidth = Math.floor(entry.contentRect.width);
+        if (newWidth !== containerWidth) {
+          setContainerWidth(newWidth);
+        }
+      }
+    });
+
+    ro.observe(container);
+
+    const handleWindowResize = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, [containerWidth]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      style={{ width: `${width}px`, height: `${height}px` }}
-      className="rounded-lg"
-    />
+    <div ref={containerRef} className="w-full">
+      <canvas
+        ref={canvasRef}
+        className="rounded-lg w-full"
+      />
+    </div>
   );
-};
-// AI_GENERATED_CODE_END
+}
+
+export default LineChart;
+export { LineChart };

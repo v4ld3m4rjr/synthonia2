@@ -3,33 +3,41 @@
 // Gerado por: Cursor AI
 // Versão: React 18.3.1
 // AI_GENERATED_CODE_START
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../../types';
+import { dbHelpers, supabase } from '../../lib/supabase';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
+import CustomDateInput from '../ui/CustomDateInput';
 import { 
   User as UserIcon, 
+  Settings, 
   Bell, 
   Shield, 
   Palette, 
   Download,
+  Upload,
   Trash2,
   Save,
-  Settings as SettingsIcon
+  AlertTriangle
 } from 'lucide-react';
 
 interface SettingsViewProps {
   user: User;
+  onProfileSave?: (updates: Partial<User>) => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ user, onProfileSave }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'privacy' | 'data'>('profile');
   const [profileData, setProfileData] = useState({
     name: user.name,
     email: user.email,
+    birth_date: user.birth_date || '',
     role: user.role,
     avatar_url: user.avatar_url || ''
   });
+  // Estado para arquivo de avatar selecionado
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [notifications, setNotifications] = useState({
     dailyReminder: true,
@@ -38,9 +46,89 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
     recommendations: true
   });
 
-  const handleProfileSave = () => {
-    // Implementar salvamento do perfil
-    alert('Perfil atualizado com sucesso!');
+  // Upload do avatar para Supabase (ou fallback demo)
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+    setAvatarFile(file);
+
+    try {
+      if (supabase) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `avatars/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const { error: uploadError } = await (supabase as any).storage.from('avatars').upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type
+        });
+        if (uploadError) {
+          alert(`Falha ao enviar avatar: ${uploadError.message}`);
+          return;
+        }
+        const { data: publicData } = (supabase as any).storage.from('avatars').getPublicUrl(filePath);
+        const publicUrl = publicData?.publicUrl || '';
+        setProfileData(prev => ({ ...prev, avatar_url: publicUrl }));
+        onProfileSave?.({ avatar_url: publicUrl });
+        // Persistir no servidor imediatamente
+        try {
+          const { error } = await dbHelpers.updateUserProfile({ id: user.id, avatar_url: publicUrl } as any);
+          if (error) {
+            if (import.meta.env.DEV) {
+              console.warn('Falha ao persistir avatar no servidor:', error);
+            }
+          }
+        } catch (persistErr) {
+          if (import.meta.env.DEV) {
+            console.warn('Erro ao persistir avatar no servidor:', persistErr);
+          }
+        }
+        alert('Avatar enviado com sucesso!');
+      } else {
+        const objectUrl = URL.createObjectURL(file);
+        setProfileData(prev => ({ ...prev, avatar_url: objectUrl }));
+        onProfileSave?.({ avatar_url: objectUrl });
+        alert('Avatar selecionado (modo demo). Ao recarregar a página, pode ser necessário selecionar novamente.');
+      }
+    } catch (err) {
+      alert('Ocorreu um erro ao processar o avatar. Tente novamente.');
+      if (import.meta.env.DEV) {
+        console.debug('SettingsView - Avatar upload error:', err);
+      }
+    }
+  };
+
+  const handleProfileSave = async () => {
+    // Atualiza estado do perfil no componente pai
+    onProfileSave?.({
+      name: profileData.name,
+      email: profileData.email,
+      birth_date: profileData.birth_date,
+      role: profileData.role as any,
+      avatar_url: profileData.avatar_url
+    });
+
+    // Persistência no backend (Supabase) se disponível
+    try {
+      const payload = {
+        id: user.id,
+        name: profileData.name,
+        email: profileData.email,
+        birth_date: profileData.birth_date,
+        role: profileData.role as any,
+        avatar_url: profileData.avatar_url
+      };
+      const { error } = await dbHelpers.updateUserProfile(payload as any);
+      if (error) {
+        alert('Atualização local feita. Falha ao salvar no servidor: ' + error.message);
+      } else {
+        alert('Perfil atualizado com sucesso!');
+      }
+    } catch (err) {
+      alert('Atualização local feita. Erro ao conectar ao servidor.');
+      if (import.meta.env.DEV) {
+        console.debug('SettingsView - updateUserProfile error:', err);
+      }
+    }
   };
 
   const handleNotificationsSave = () => {
@@ -80,8 +168,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
-        <p className="text-gray-600">Gerencie suas preferências e dados da conta</p>
+        <h1 className="text-3xl font-bold text-white">Configurações</h1>
+        <p className="text-gray-300">Gerencie suas preferências e dados da conta</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -96,8 +184,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-600 text-white font-medium'
+                        : 'text-gray-300 hover:bg-gray-700'
                     }`}
                   >
                     {tab.icon}
@@ -115,18 +203,30 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <UserIcon className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold">Informações do Perfil</h2>
+                  <UserIcon className="h-5 w-5 text-blue-400" />
+                  <h2 className="text-xl font-semibold text-white">Informações do Perfil</h2>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center space-x-6">
-                  <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                    <UserIcon className="h-10 w-10 text-white" />
+                  <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center overflow-hidden">
+                    {profileData.avatar_url ? (
+                      <img
+                        src={profileData.avatar_url}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://i.ibb.co/HDjWvZ8W/Chat-GPT-Image-6-07-2025-18-59-08.png';
+              }}
+                      />
+                    ) : (
+                      <UserIcon className="h-10 w-10 text-white" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">{user.name}</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRoleBadge(user.role).color}`}>
+                    <h3 className="text-lg font-medium text-white">{user.name}</h3>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-600 text-white`}>
                       {getRoleBadge(user.role).text}
                     </span>
                   </div>
@@ -134,37 +234,49 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Nome Completo
                     </label>
                     <input
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Email
                     </label>
                     <input
                       type="email"
                       value={profileData.email}
                       onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Data de Nascimento
+                    </label>
+                    <CustomDateInput
+                      value={profileData.birth_date}
+                      onChange={(value) => setProfileData({...profileData, birth_date: value})}
+                      className="w-full"
+                      name="birth_date"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Perfil
                     </label>
                     <select
                       value={profileData.role}
                       onChange={(e) => setProfileData({...profileData, role: e.target.value as any})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="athlete">Atleta</option>
                       <option value="coach">Treinador</option>
@@ -173,7 +285,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       URL do Avatar
                     </label>
                     <input
@@ -181,8 +293,20 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       value={profileData.avatar_url}
                       onChange={(e) => setProfileData({...profileData, avatar_url: e.target.value})}
                       placeholder="https://exemplo.com/avatar.jpg"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Upload de Avatar (imagem)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarFileChange}
+                        className="w-full text-gray-300"
+                      />
+                      <p className="mt-2 text-xs text-gray-400">Arquivos de imagem (JPG, PNG, SVG). Em ambiente com Supabase, o arquivo será salvo no bucket 'avatars'.</p>
+                    </div>
                   </div>
                 </div>
 
@@ -208,8 +332,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">Lembrete Diário</h3>
-                      <p className="text-sm text-gray-600">Receba lembretes para fazer sua avaliação diária</p>
+                      <h3 className="font-medium text-white">Lembrete Diário</h3>
+                      <p className="text-sm text-gray-300">Receba lembretes para fazer sua avaliação diária</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -218,14 +342,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                         onChange={(e) => setNotifications({...notifications, dailyReminder: e.target.checked})}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">Relatório Semanal</h3>
-                      <p className="text-sm text-gray-600">Receba um resumo semanal do seu progresso</p>
+                      <h3 className="font-medium text-white">Relatório Semanal</h3>
+                      <p className="text-sm text-gray-300">Receba um resumo semanal do seu progresso</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -234,14 +358,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                         onChange={(e) => setNotifications({...notifications, weeklyReport: e.target.checked})}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">Conquistas</h3>
-                      <p className="text-sm text-gray-600">Seja notificado quando alcançar novos marcos</p>
+                      <h3 className="font-medium text-white">Conquistas</h3>
+                      <p className="text-sm text-gray-300">Seja notificado quando alcançar novos marcos</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -250,14 +374,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                         onChange={(e) => setNotifications({...notifications, achievements: e.target.checked})}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">Recomendações</h3>
-                      <p className="text-sm text-gray-600">Receba sugestões personalizadas de treino</p>
+                      <h3 className="font-medium text-white">Recomendações</h3>
+                      <p className="text-sm text-gray-300">Receba sugestões personalizadas de treino</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -266,7 +390,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                         onChange={(e) => setNotifications({...notifications, recommendations: e.target.checked})}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
                 </div>
@@ -299,8 +423,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Controle de Dados</h4>
-                    <div className="space-y-2 text-sm text-gray-600">
+                    <h4 className="font-medium text-white">Controle de Dados</h4>
+                    <div className="space-y-2 text-sm text-gray-300">
                       <p>• Seus dados de saúde são armazenados de forma segura e criptografada</p>
                       <p>• Você pode exportar ou excluir seus dados a qualquer momento</p>
                       <p>• Não compartilhamos suas informações com terceiros sem consentimento</p>
@@ -309,27 +433,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Configurações de Privacidade</h4>
+                    <h4 className="font-medium text-white">Configurações de Privacidade</h4>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h5 className="font-medium text-gray-900">Perfil Público</h5>
-                          <p className="text-sm text-gray-600">Permitir que outros usuários vejam seu perfil básico</p>
+                          <h5 className="font-medium text-white">Perfil Público</h5>
+                          <p className="text-sm text-gray-300">Permitir que outros usuários vejam seu perfil básico</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <h5 className="font-medium text-gray-900">Análise de Dados</h5>
-                          <p className="text-sm text-gray-600">Permitir análise anônima para melhorar o serviço</p>
+                          <h5 className="font-medium text-white">Análise de Dados</h5>
+                          <p className="text-sm text-gray-300">Permitir análise anônima para melhorar o serviço</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" defaultChecked className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </div>
                     </div>
@@ -372,19 +496,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Estatísticas de Uso</h4>
+                    <h4 className="font-medium text-white">Estatísticas de Uso</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">--</div>
-                        <div className="text-sm text-gray-600">Avaliações Diárias</div>
+                      <div className="p-4 bg-gray-700 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">--</div>
+                        <div className="text-sm text-gray-300">Avaliações Diárias</div>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">--</div>
-                        <div className="text-sm text-gray-600">Sessões de Treino</div>
+                      <div className="p-4 bg-gray-700 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">--</div>
+                        <div className="text-sm text-gray-300">Sessões de Treino</div>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">--</div>
-                        <div className="text-sm text-gray-600">Dias de Uso</div>
+                      <div className="p-4 bg-gray-700 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">--</div>
+                        <div className="text-sm text-gray-300">Dias de Uso</div>
                       </div>
                     </div>
                   </div>
@@ -399,4 +523,3 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
 };
 
 export default SettingsView;
-// AI_GENERATED_CODE_END

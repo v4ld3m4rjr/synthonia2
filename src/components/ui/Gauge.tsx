@@ -30,11 +30,11 @@ export const Gauge: React.FC<GaugeProps> = ({
   
   return (
     <div className="flex flex-col items-center">
-      <div className="relative">
+      <div className="relative overflow-x-hidden">
         <svg
-          width={size}
-          height={size}
-          className="transform -rotate-90"
+          className="transform -rotate-90 w-full h-auto block"
+          viewBox={`0 0 ${size} ${size}`}
+          preserveAspectRatio="xMidYMid meet"
         >
           {/* Background circle */}
           <circle

@@ -7,7 +7,23 @@ import React, { useState } from 'react';
 import { authHelpers } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Activity, Brain, Target, Users, Award, TrendingUp } from 'lucide-react';
+import { Activity, Target, Users, Award, TrendingUp, Brain } from 'lucide-react';
+import SynthoniaLogo from '../ui/SynthoniaLogo';
+import CustomDateInputLight from '../ui/CustomDateInputLight';
+
+const FeatureCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}> = ({ icon, title, description }) => {
+  return (
+    <div className="bg-gray-800/70 backdrop-blur-sm rounded-lg p-4 text-center space-y-2 hover:bg-gray-700/80 transition-colors">
+      <div className="flex justify-center">{icon}</div>
+      <h3 className="font-semibold text-sm text-white">{title}</h3>
+      <p className="text-xs text-gray-300 leading-tight">{description}</p>
+    </div>
+  );
+};
 
 const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +33,7 @@ const AuthScreen: React.FC = () => {
     email: '',
     password: '',
     name: '',
+    birth_date: '',
     role: 'athlete' as 'athlete' | 'coach' | 'physiotherapist',
     coach_id: ''
   });
@@ -46,6 +63,7 @@ const AuthScreen: React.FC = () => {
       } else {
         const { error } = await authHelpers.signUp(formData.email, formData.password, {
           name: formData.name,
+          birth_date: formData.birth_date,
           role: formData.role,
           coach_id: formData.coach_id || null
         });
@@ -74,21 +92,19 @@ const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         
         {/* Hero Section */}
         <div className="text-center lg:text-left space-y-8">
           <div className="space-y-4">
             <div className="flex items-center justify-center lg:justify-start space-x-2 mb-6">
-              <div className="p-3 bg-blue-600 rounded-xl">
-                <Brain className="h-8 w-8 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Synthonia AI
-              </h1>
+              <SynthoniaLogo className="h-10 w-10" size={48} />
             </div>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              SynthonIA AI
+            </h1>
+            <p className="text-xl text-gray-300 leading-relaxed">
               Plataforma inteligente de monitoramento esportivo que combina ciência do treinamento com análise avançada de recuperação
             </p>
           </div>
@@ -190,6 +206,19 @@ const AuthScreen: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Data de Nascimento
+                    </label>
+                    <CustomDateInputLight
+                      value={formData.birth_date}
+                      onChange={(value) => setFormData({...formData, birth_date: value})}
+                      className="w-full"
+                      name="birth_date"
+                      required={!isLogin}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Perfil
                     </label>
                     <select
@@ -274,20 +303,6 @@ const AuthScreen: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-};
-
-const FeatureCard: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}> = ({ icon, title, description }) => {
-  return (
-    <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 text-center space-y-2 hover:bg-white/70 transition-colors">
-      <div className="flex justify-center">{icon}</div>
-      <h3 className="font-semibold text-sm text-gray-800">{title}</h3>
-      <p className="text-xs text-gray-600 leading-tight">{description}</p>
     </div>
   );
 };

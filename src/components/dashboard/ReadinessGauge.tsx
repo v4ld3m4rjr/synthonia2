@@ -42,18 +42,18 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
   return (
     <Card className="h-full">
       <CardHeader className="text-center pb-2">
-        <h2 className="text-2xl font-bold text-gray-900">Readiness Score</h2>
-        <p className="text-sm text-gray-600">{date}</p>
+        <h2 className="text-2xl font-bold text-white">Readiness Score</h2>
+        <p className="text-sm text-gray-300">{date}</p>
       </CardHeader>
       
       <CardContent className="flex flex-col items-center justify-center space-y-6">
         
         {/* Gauge SVG */}
-        <div className="relative">
+        <div className="relative overflow-x-hidden">
           <svg
-            width={size}
-            height={size}
-            className="transform -rotate-90"
+            className="transform -rotate-90 w-full h-auto block"
+            viewBox={`0 0 ${size} ${size}`}
+            preserveAspectRatio="xMidYMid meet"
             style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.1))' }}
           >
             {/* Background circle */}
@@ -66,7 +66,6 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
               fill="transparent"
               className="opacity-30"
             />
-            
             {/* Gradient definition */}
             <defs>
               <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -74,7 +73,6 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
                 <stop offset="100%" stopColor={color} stopOpacity="0.6" />
               </linearGradient>
             </defs>
-            
             {/* Progress circle */}
             <circle
               cx={size / 2}
@@ -88,7 +86,6 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
               strokeDashoffset={strokeDashoffset}
               className="transition-all duration-2000 ease-out"
             />
-            
             {/* Inner glow */}
             <circle
               cx={size / 2}
@@ -100,7 +97,6 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
               className="opacity-20"
             />
           </svg>
-          
           {/* Center content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-6xl font-bold mb-2" style={{ color }}>
@@ -108,10 +104,10 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
             </div>
             <div className="text-center">
               <div className="text-2xl mb-1">{scoreLabel.emoji}</div>
-              <div className="text-lg font-semibold text-gray-800 mb-1">
+              <div className="text-lg font-semibold text-white mb-1">
                 {scoreLabel.text}
               </div>
-              <div className="text-sm text-gray-600 max-w-32 leading-tight">
+              <div className="text-sm text-gray-300 max-w-32 leading-tight">
                 {scoreLabel.desc}
               </div>
             </div>
@@ -120,14 +116,14 @@ const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, date }) => {
 
         {/* Score Range Indicator */}
         <div className="w-full max-w-xs">
-          <div className="flex justify-between text-xs font-medium text-gray-600 mb-2">
+          <div className="flex justify-between text-xs font-medium text-gray-300 mb-2">
             <span>0</span>
             <span>25</span>
             <span>50</span>
             <span>75</span>
             <span>100</span>
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-600 rounded-full overflow-hidden">
             <div className="h-full flex">
               <div className="flex-1 bg-red-400"></div>
               <div className="flex-1 bg-yellow-400"></div>
