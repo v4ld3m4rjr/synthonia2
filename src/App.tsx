@@ -29,19 +29,6 @@ function App() {
         }
       });
     } else {
-      // Demo mode - simulate logged in user only if not logged out
-      if (!isLoggedOut) {
-        const demoUser = {
-          id: 'demo-user-123',
-          email: 'demo@synthonia.ai',
-          name: 'Usuário Demo',
-          role: 'athlete' as const,
-          created_at: new Date().toISOString(),
-          avatar_url: null
-        };
-        setUser(demoUser as any);
-        setUserProfile(demoUser);
-      }
       setLoading(false);
     }
 
@@ -64,20 +51,6 @@ function App() {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
-    if (!supabase) {
-      // Demo mode
-      setUserProfile({
-        id: 'demo-user-123',
-        email: 'demo@synthonia.ai',
-        name: 'Usuário Demo',
-        role: 'athlete',
-        created_at: new Date().toISOString(),
-        avatar_url: null
-      });
-      setLoading(false);
-      return;
-    }
-    
     try {
       const { data, error } = await supabase
         .from('users')
@@ -86,7 +59,6 @@ function App() {
         .single();
 
       if (error) {
-        // Fallback silencioso caso a tabela 'users' não exista (PGRST205) ou outro erro de leitura
         const authUser = user;
         setUserProfile({
           id: authUser?.id || userId,
@@ -100,7 +72,6 @@ function App() {
         setUserProfile(data as any);
       }
     } catch (_err) {
-      // Fallback em caso de exceção inesperada
       const authUser = user;
       setUserProfile({
         id: authUser?.id || userId,
@@ -115,14 +86,7 @@ function App() {
     }
   }
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    } else {
-      // Demo mode - clear user state
-      setUser(null);
-      setUserProfile(null);
-      setIsLoggedOut(true);
-    }
+    await supabase.auth.signOut();
   };
 
   if (loading) {

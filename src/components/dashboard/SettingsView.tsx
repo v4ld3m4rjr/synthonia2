@@ -46,49 +46,42 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onProfileSave }) => {
     recommendations: true
   });
 
-  // Upload do avatar para Supabase (ou fallback demo)
+  // Upload do avatar para Supabase
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (!file) return;
     setAvatarFile(file);
 
     try {
-      if (supabase) {
-        const fileExt = file.name.split('.').pop();
-        const filePath = `avatars/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-        const { error: uploadError } = await (supabase as any).storage.from('avatars').upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type
-        });
-        if (uploadError) {
-          alert(`Falha ao enviar avatar: ${uploadError.message}`);
-          return;
-        }
-        const { data: publicData } = (supabase as any).storage.from('avatars').getPublicUrl(filePath);
-        const publicUrl = publicData?.publicUrl || '';
-        setProfileData(prev => ({ ...prev, avatar_url: publicUrl }));
-        onProfileSave?.({ avatar_url: publicUrl });
-        // Persistir no servidor imediatamente
-        try {
-          const { error } = await dbHelpers.updateUserProfile({ id: user.id, avatar_url: publicUrl } as any);
-          if (error) {
-            if (import.meta.env.DEV) {
-              console.warn('Falha ao persistir avatar no servidor:', error);
-            }
-          }
-        } catch (persistErr) {
-          if (import.meta.env.DEV) {
-            console.warn('Erro ao persistir avatar no servidor:', persistErr);
-          }
-        }
-        alert('Avatar enviado com sucesso!');
-      } else {
-        const objectUrl = URL.createObjectURL(file);
-        setProfileData(prev => ({ ...prev, avatar_url: objectUrl }));
-        onProfileSave?.({ avatar_url: objectUrl });
-        alert('Avatar selecionado (modo demo). Ao recarregar a página, pode ser necessário selecionar novamente.');
+      const fileExt = file.name.split('.').pop();
+      const filePath = `avatars/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      const { error: uploadError } = await (supabase as any).storage.from('avatars').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type
+      });
+      if (uploadError) {
+        alert(`Falha ao enviar avatar: ${uploadError.message}`);
+        return;
       }
+      const { data: publicData } = (supabase as any).storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = publicData?.publicUrl || '';
+      setProfileData(prev => ({ ...prev, avatar_url: publicUrl }));
+      onProfileSave?.({ avatar_url: publicUrl });
+      // Persistir no servidor imediatamente
+      try {
+        const { error } = await dbHelpers.updateUserProfile({ id: user.id, avatar_url: publicUrl } as any);
+        if (error) {
+          if (import.meta.env.DEV) {
+            console.warn('Falha ao persistir avatar no servidor:', error);
+          }
+        }
+      } catch (persistErr) {
+        if (import.meta.env.DEV) {
+          console.warn('Erro ao persistir avatar no servidor:', persistErr);
+        }
+      }
+      alert('Avatar enviado com sucesso!');
     } catch (err) {
       alert('Ocorreu um erro ao processar o avatar. Tente novamente.');
       if (import.meta.env.DEV) {
