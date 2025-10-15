@@ -9,15 +9,91 @@ import type { User } from '../types';
 // Configuração do Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const authRedirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL;
+
+// Resolve dinamicamente a URL de redirecionamento (origem atual) para evitar portas incorretas
+const resolveRedirectUrl = (): string | undefined => {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/`;
+  }
+  return authRedirectUrl || undefined;
+};
+
+// Fallback: permitir configuração via localStorage quando env não estiverem definidos (útil em preview)
+const fallbackSupabaseUrl = (typeof window !== 'undefined')
+  ? (window.localStorage.getItem('SUPABASE_URL') || undefined)
+  : undefined;
+const fallbackSupabaseAnonKey = (typeof window !== 'undefined')
+  ? (window.localStorage.getItem('SUPABASE_ANON_KEY') || undefined)
+  : undefined;
+
+const effectiveSupabaseUrl = supabaseUrl || fallbackSupabaseUrl;
+const effectiveSupabaseAnonKey = supabaseAnonKey || fallbackSupabaseAnonKey;
 
 // Verificação de configuração: evita erro de criação do cliente com variáveis indefinidas
-export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey)
+export let supabase: SupabaseClient | null = (effectiveSupabaseUrl && effectiveSupabaseAnonKey)
+  ? createClient(effectiveSupabaseUrl, effectiveSupabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
+
+// Inicialização dinâmica do Supabase em tempo de execução
+const getRuntimeConfig = async (): Promise<{ url?: string; anonKey?: string }> => {
+  try {
+    const url = (typeof window !== 'undefined')
+      ? (window.localStorage.getItem('SUPABASE_URL') || undefined)
+      : undefined;
+    const anonKey = (typeof window !== 'undefined')
+      ? (window.localStorage.getItem('SUPABASE_ANON_KEY') || undefined)
+      : undefined;
+    if (url && anonKey) return { url, anonKey };
+
+    if (typeof window !== 'undefined') {
+      const res = await fetch('/supabase-config.json', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        const jsonUrl = json.url || json.supabaseUrl || json.SUPABASE_URL;
+        const jsonKey = json.anonKey || json.supabaseAnonKey || json.SUPABASE_ANON_KEY;
+        if (jsonUrl && jsonKey) {
+          try {
+            window.localStorage.setItem('SUPABASE_URL', jsonUrl);
+            window.localStorage.setItem('SUPABASE_ANON_KEY', jsonKey);
+          } catch (_) {}
+          return { url: jsonUrl, anonKey: jsonKey };
+        }
+      }
+    }
+  } catch (_) {
+    // silencioso para não afetar UX
+  }
+  return {};
+};
+
+export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null> => {
+  if (supabase) return supabase;
+  const runtime = await getRuntimeConfig();
+  const finalUrl = effectiveSupabaseUrl || runtime.url;
+  const finalKey = effectiveSupabaseAnonKey || runtime.anonKey;
+  if (finalUrl && finalKey) {
+    supabase = createClient(finalUrl, finalKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
+  return supabase;
+};
 
 // Helpers de Autenticação
 export const authHelpers = {
   async signUp(email: string, password: string, userData: any) {
+    await ensureSupabaseConfigured();
     if (!supabase) {
       return {
         data: null,
@@ -30,7 +106,8 @@ export const authHelpers = {
         email,
         password,
         options: {
-          data: userData
+          data: userData,
+          emailRedirectTo: resolveRedirectUrl(),
         }
       });
       return { data, error };
@@ -45,6 +122,7 @@ export const authHelpers = {
   },
 
   async signIn(email: string, password: string) {
+    await ensureSupabaseConfigured();
     if (!supabase) {
       return {
         data: null,
@@ -69,6 +147,7 @@ export const authHelpers = {
   },
 
   async signOut() {
+    await ensureSupabaseConfigured();
     if (!supabase) {
       return { error: { message: 'Supabase não configurado.' } };
     }
@@ -82,7 +161,26 @@ export const authHelpers = {
     }
     const { data: { user } } = await supabase.auth.getUser();
     return user;
-  }
+  },
+
+  async resendSignupEmail(email: string) {
+    await ensureSupabaseConfigured();
+    if (!supabase) {
+      return { error: { message: 'Supabase não configurado.' } };
+    }
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: resolveRedirectUrl(),
+        },
+      });
+      return { error };
+    } catch (networkError) {
+      return { error: { message: 'Erro de conexão com o servidor.' } };
+    }
+  },
 };
 
 // Helpers de Banco de Dados
@@ -96,22 +194,25 @@ export const dbHelpers = {
     }
     const { data: result, error } = await supabase
       .from('daily_data')
-      .insert([{
-        date: data.date,
-        sleep_quality: data.sleep_quality,
-        fatigue_level: data.fatigue_level,
-        mood: data.mood,
-        muscle_soreness: data.muscle_soreness,
-        stress_level: data.stress_level,
-        resting_hr: data.resting_hr ?? null,
-        hrv: data.hrv ?? null,
-        tqr: data.tqr ?? null,
-        psr: data.psr ?? null,
-        sleep_duration: data.sleep_duration ?? null,
-        sleep_regularity: data.sleep_regularity ?? null,
-        exhaustion: data.exhaustion ?? null,
-        readiness_score: data.readiness_score ?? null,
-      }])
+      .insert([
+        {
+          user_id: data.user_id,
+          date: data.date,
+          sleep_quality: data.sleep_quality,
+          fatigue_level: data.fatigue_level,
+          mood: data.mood,
+          muscle_soreness: data.muscle_soreness,
+          stress_level: data.stress_level,
+          resting_hr: data.resting_hr ?? null,
+          hrv: data.hrv ?? null,
+          tqr: data.tqr ?? null,
+          psr: data.psr ?? null,
+          sleep_duration: data.sleep_duration ?? null,
+          sleep_regularity: data.sleep_regularity ?? null,
+          exhaustion: data.exhaustion ?? null,
+          readiness_score: data.readiness_score ?? null,
+        },
+      ])
       .select();
     return { data: result, error };
   },
@@ -141,18 +242,21 @@ export const dbHelpers = {
     }
     const { data: result, error } = await supabase
       .from('training_sessions')
-      .insert([{
-        date: session.date,
-        duration: session.duration,
-        rpe: session.rpe,
-        training_type: session.training_type,
-        volume: session.volume ?? null,
-        intensity: session.intensity ?? null,
-        tss: session.tss ?? 0,
-        trimp: session.trimp ?? 0,
-        pse: session.pse ?? null,
-        notes: session.notes ?? null,
-      }])
+      .insert([
+        {
+          user_id: session.user_id,
+          date: session.date,
+          duration: session.duration,
+          rpe: session.rpe,
+          training_type: session.training_type,
+          volume: session.volume ?? null,
+          intensity: session.intensity ?? null,
+          tss: session.tss ?? 0,
+          trimp: session.trimp ?? 0,
+          pse: session.pse ?? null,
+          notes: session.notes ?? null,
+        },
+      ])
       .select();
     return { data: result, error };
   },

@@ -24,6 +24,34 @@ export default defineConfig({
     },
     fs: {
       allow: ['..']
-    }
+    },
+    headers: {
+      // CSP permissiva apenas para desenvolvimento para permitir HMR e eval
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' http: https: ws: wss:",
+        "font-src 'self' data:",
+        "worker-src 'self' blob:"
+      ].join('; '),
+    },
+  },
+  preview: {
+    port: 4173,
+    strictPort: false,
+    headers: {
+      // CSP mais restrita para preview (quase produção), sem unsafe-eval
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https: wss:",
+        "font-src 'self' data:",
+        "worker-src 'self' blob:"
+      ].join('; '),
+    },
   }
 });
