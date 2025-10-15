@@ -46,6 +46,8 @@ const AuthScreen: React.FC = () => {
   const [signupEmailSent, setSignupEmailSent] = useState(false);
   const [supabaseReady, setSupabaseReady] = useState(!!supabase);
   const supabaseConfigured = supabaseReady;
+  // Quando não há treinadores carregados ou ocorre erro, não exigir seleção
+  const coachAvailable = coaches.length > 0 && !coachError;
   const [supabaseUrlInput, setSupabaseUrlInput] = useState('');
   const [supabaseKeyInput, setSupabaseKeyInput] = useState('');
   const redirectHint = (typeof window !== 'undefined' && window.location && window.location.origin)
@@ -84,7 +86,8 @@ const AuthScreen: React.FC = () => {
         .eq('role', 'coach')
         .order('name', { ascending: true });
       if (error) {
-        setCoachError('Falha ao carregar treinadores.');
+        // Não bloquear cadastro: apenas avisar e permitir seguir sem treinador
+        setCoachError('Treinadores indisponíveis no momento (tabela users não encontrada ou vazia). Você poderá vincular depois.');
       } else {
         setCoaches((data || []).map((c: any) => ({ id: c.id, name: c.name || c.email || 'Treinador', email: c.email })));
       }
@@ -125,7 +128,8 @@ const AuthScreen: React.FC = () => {
         if (!value) msg = 'Selecione seu perfil.';
         break;
       case 'coach_id':
-        if (formData.role === 'athlete' && !value) msg = 'Selecione seu treinador.';
+        // Exigir treinador somente se houver lista disponível e sem erros
+        if (formData.role === 'athlete' && coachAvailable && !value) msg = 'Selecione seu treinador.';
         break;
       default:
         break;
@@ -142,10 +146,10 @@ const AuthScreen: React.FC = () => {
       (!!formData.password && formData.password.length >= 8) &&
       (!!formData.role)
     );
-    const coachOk = formData.role !== 'athlete' ? true : !!formData.coach_id;
+    const coachOk = formData.role !== 'athlete' ? true : (coachAvailable ? !!formData.coach_id : true);
     const noErrors = Object.values(errors).every(v => !v);
     return requiredOk && coachOk && noErrors;
-  }, [formData, errors]);
+  }, [formData, errors, coachAvailable]);
   // const handleDemoLogin = () => {
   //   setLoading(true);
   //   setTimeout(() => {
@@ -393,13 +397,13 @@ const AuthScreen: React.FC = () => {
                             setFormData(prev => ({ ...prev, coach_id: v }));
                             validateField('coach_id', v);
                           }}
-                          required
+                          required={coachAvailable}
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                           aria-invalid={!!errors.coach_id}
                           aria-describedby="coach-error"
                         >
                           <option value="" disabled>
-                            {coachLoading ? 'Carregando...' : 'Selecione um treinador'}
+                            {coachLoading ? 'Carregando...' : (coachAvailable ? 'Selecione um treinador' : 'Nenhum treinador disponível')}
                           </option>
                           {filteredCoaches.map((c) => (
                             <option key={c.id} value={c.id}>
