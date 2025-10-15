@@ -10,6 +10,7 @@ import { User } from './types';
 import AuthScreen from './components/auth/AuthScreen';
 import Dashboard from './components/dashboard/Dashboard';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import CookieConsent from './components/ui/CookieConsent';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -97,14 +98,19 @@ function App() {
     );
   }
 
-  if (!user || !userProfile) {
-    return <AuthScreen />;
-  }
+  const content = (!user || !userProfile)
+    ? (<AuthScreen />)
+    : (
+      <div className="min-h-screen" style={{ backgroundColor: '#001a33' }}>
+        <Dashboard user={userProfile} onLogout={handleLogout} />
+      </div>
+    );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#001a33' }}>
-      <Dashboard user={userProfile} onLogout={handleLogout} />
-    </div>
+    <>
+      {content}
+      <CookieConsent />
+    </>
   );
 }
 
