@@ -89,3 +89,28 @@ Observações
 
 - Se a lista de treinadores estiver vazia, o cadastro não será bloqueado e o e-mail de confirmação será enviado normalmente.
 - Para povoar treinadores, você pode inserir registros diretamente na tabela `public.users` com `role = 'coach'`.
+
+Templates de e-mail (Supabase)
+
+- Em Authentication → Templates → Confirm signup:
+  - Assunto: `Confirme seu e‑mail — Synthonia AI`.
+  - HTML: use o arquivo `supabase/email_templates/confirm-signup.html` deste repositório.
+  - Texto: use o arquivo `supabase/email_templates/confirm-signup.txt`.
+  - Salve as alterações.
+- Dica: mantenha o link `{{ .ConfirmationURL }}` exatamente como nos exemplos.
+
+Logs e entregabilidade
+
+- Authentication → Logs: monitore eventos “Email sent”, “Mailer error”, “Redirect not allowed”, “Rate limit”.
+- Authentication → Email:
+  - Ative “Confirm email”.
+  - Configure “From email” e, se usar SMTP custom, valide host/porta/TLS/usuário/senha.
+- Authentication → URL Configuration:
+  - `Site URL`: `https://synthonia.app/`.
+  - `Additional Redirect URLs`: `https://synthonia.app/`.
+- DNS do domínio (se usar remetente próprio): configure SPF, DKIM e DMARC para melhorar entregabilidade.
+
+Reenvio de confirmação
+
+- A tela de cadastro exibe confirmação e um botão “Reenviar e‑mail de confirmação”.
+- Alternativamente, use o painel de usuários do Supabase: selecione o usuário e clique em “Resend confirmation email”.
