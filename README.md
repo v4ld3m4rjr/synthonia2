@@ -114,3 +114,13 @@ Reenvio de confirmação
 
 - A tela de cadastro exibe confirmação e um botão “Reenviar e‑mail de confirmação”.
 - Alternativamente, use o painel de usuários do Supabase: selecione o usuário e clique em “Resend confirmation email”.
+
+Configurar provedor de e‑mail (SMTP)
+
+- Use o guia em `supabase/email_provider_config.md` para configurar SendGrid, Mailgun ou Amazon SES.
+- Em Supabase → Authentication → Email → Mail provider: selecione “Custom SMTP” e preencha:
+  - `SMTP Host`, `SMTP Port` (587/465), `Secure` (false para 587, true para 465)
+  - `Username`, `Password`
+  - `Sender name` (ex.: Synthonia AI) e `Sender email` (ex.: no-reply@synthonia.app)
+- Autentique o domínio no provedor (SPF, DKIM e DMARC) para alta entregabilidade.
+- Após salvar, teste o cadastro e verifique “Email sent” em Authentication → Logs.
