@@ -110,8 +110,10 @@ export const authHelpers = {
           emailRedirectTo: resolveRedirectUrl(),
         }
       });
+      console.info('[auth] signUp result', { data, error });
       return { data, error };
     } catch (networkError) {
+      console.error('[auth] signUp network error', networkError);
       return {
         data: null,
         error: {
@@ -176,8 +178,10 @@ export const authHelpers = {
           emailRedirectTo: resolveRedirectUrl(),
         },
       });
+      console.info('[auth] resend signup email', { email, error });
       return { error };
     } catch (networkError) {
+      console.error('[auth] resend network error', networkError);
       return { error: { message: 'Erro de conexão com o servidor.' } };
     }
   },

@@ -107,7 +107,7 @@ Logs e entregabilidade
   - Configure “From email” e, se usar SMTP custom, valide host/porta/TLS/usuário/senha.
 - Authentication → URL Configuration:
   - `Site URL`: `https://synthonia.app/`.
-  - `Additional Redirect URLs`: `https://synthonia.app/`.
+  - `Additional Redirect URLs`: `https://synthonia.app/`, `http://localhost:5177/` (dev) e `http://localhost:4173/` (preview).
 - DNS do domínio (se usar remetente próprio): configure SPF, DKIM e DMARC para melhorar entregabilidade.
 
 Reenvio de confirmação
