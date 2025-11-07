@@ -5,7 +5,7 @@
 // AI_GENERATED_CODE_START
 import React, { useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase, authHelpers } from './lib/supabase';
+import { supabase, authHelpers, ensureSupabaseConfigured } from './lib/supabase';
 import { User } from './types';
 import AuthScreen from './components/auth/AuthScreen';
 import Dashboard from './components/dashboard/Dashboard';
@@ -19,9 +19,14 @@ function App() {
   const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   useEffect(() => {
-    // Verificar sessão atual
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+    // Garantir que o cliente Supabase esteja configurado antes de ler sessão e escutar auth
+    ensureSupabaseConfigured().then((client) => {
+      if (!client) {
+        setLoading(false);
+        return;
+      }
+
+      client.auth.getSession().then(({ data: { session } }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchUserProfile(session.user.id);
@@ -29,15 +34,8 @@ function App() {
           setLoading(false);
         }
       });
-    } else {
-      setLoading(false);
-    }
 
-    // Escutar mudanças de autenticação
-    if (supabase) {
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchUserProfile(session.user.id);
@@ -48,12 +46,17 @@ function App() {
       });
 
       return () => subscription.unsubscribe();
-    }
+    });
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const client = supabase || await ensureSupabaseConfigured();
+      if (!client) {
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await client
         .from('users')
         .select('*')
         .eq('id', userId)
