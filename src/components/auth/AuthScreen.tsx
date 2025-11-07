@@ -15,15 +15,13 @@ const FeatureCard: React.FC<{
   icon: React.ReactNode;
   title: string;
   description: string;
-}> = ({ icon, title, description }) => {
-  return (
-    <div className="bg-gray-800/70 backdrop-blur-sm rounded-lg p-4 text-center space-y-2 hover:bg-gray-700/80 transition-colors">
-      <div className="flex justify-center">{icon}</div>
-      <h3 className="font-semibold text-sm text-white">{title}</h3>
-      <p className="text-xs text-gray-300 leading-tight">{description}</p>
-    </div>
-  );
-};
+}> = ({ icon, title, description }) => (
+  <div className="bg-gray-800/70 backdrop-blur-sm rounded-lg p-4 text-center space-y-2 hover:bg-gray-700/80 transition-colors">
+    <div className="flex justify-center">{icon}</div>
+    <h3 className="font-semibold text-sm text-white">{title}</h3>
+    <p className="text-xs text-gray-300 leading-tight">{description}</p>
+  </div>
+);
 
 const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -61,7 +59,12 @@ const AuthScreen: React.FC = () => {
     }
     const { error } = await authHelpers.resendSignupEmail(formData.email);
     if (error) {
-      alert('Não foi possível reenviar a confirmação: ' + error.message);
+      const msg = error.message || '';
+      if (msg.includes('Failed to fetch')) {
+        alert('❌ Falha de conexão com Supabase ao reenviar.\n\n💡 Dica: Verifique a URL e anon key em "Configuração Supabase" e salve novamente.');
+      } else {
+        alert('Não foi possível reenviar a confirmação: ' + msg);
+      }
     } else {
       alert('E-mail de confirmação reenviado. Verifique sua caixa de entrada e spam.');
     }
@@ -69,7 +72,7 @@ const AuthScreen: React.FC = () => {
 
   useEffect(() => {
     // Tenta configurar Supabase ao montar, usando fallback em runtime
-    ensureSupabaseConfigured().then(() => setSupabaseReady(true)).catch(() => {});
+    ensureSupabaseConfigured().then((client) => setSupabaseReady(!!client)).catch(() => setSupabaseReady(false));
   }, []);
 
   useEffect(() => {
@@ -108,48 +111,47 @@ const AuthScreen: React.FC = () => {
     );
   }, [coachQuery, coaches]);
 
-  const validateField = (name: string, value: string) => {
-    let msg = '';
+  const isFormValid = useMemo(() => {
+    const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validatePassword = (password: string) => password.length >= 6;
+    const validateName = (name: string) => name.trim().length > 2;
+    const validateBirthDate = (birthDate: string) => !!birthDate;
+
+    const baseValid = validateEmail(formData.email) && validatePassword(formData.password);
+    const signupValid = isLogin || (validateName(formData.name) && validateBirthDate(formData.birth_date));
+    const coachValid = isLogin || formData.role !== 'athlete' || !!formData.coach_id || !coachAvailable;
+
+    return baseValid && signupValid && coachValid;
+  }, [formData, isLogin, coachAvailable]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    validateField(name as keyof typeof formData, value);
+  };
+
+  const validateField = (name: keyof typeof formData, value: any) => {
     switch (name) {
-      case 'name':
-        if (!value || value.trim().length < 2) msg = 'Informe seu nome completo.';
-        break;
-      case 'birth_date':
-        if (!value) msg = 'Informe sua data de nascimento.';
-        break;
       case 'email':
-        if (!value) msg = 'Informe seu e-mail.';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) msg = 'E-mail inválido.';
+        setErrors(prev => ({ ...prev, email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Email inválido' }));
         break;
       case 'password':
-        if (!value || value.length < 8) msg = 'Senha deve ter ao menos 8 caracteres.';
+        setErrors(prev => ({ ...prev, password: value.length >= 6 ? '' : 'A senha deve ter pelo menos 6 caracteres' }));
         break;
-      case 'role':
-        if (!value) msg = 'Selecione seu perfil.';
+      case 'name':
+        setErrors(prev => ({ ...prev, name: value.trim().length > 2 ? '' : 'Informe seu nome completo' }));
+        break;
+      case 'birth_date':
+        setErrors(prev => ({ ...prev, birth_date: value ? '' : 'Informe sua data de nascimento' }));
         break;
       case 'coach_id':
-        // Exigir treinador somente se houver lista disponível e sem erros
-        if (formData.role === 'athlete' && coachAvailable && !value) msg = 'Selecione seu treinador.';
+        setErrors(prev => ({ ...prev, coach_id: value ? '' : 'Selecione um treinador ou deixe em branco' }));
         break;
       default:
         break;
     }
-    setErrors(prev => ({ ...prev, [name]: msg }));
-    return msg;
   };
 
-  const isFormValid = useMemo(() => {
-    const requiredOk = (
-      (!!formData.name && formData.name.trim().length >= 2) &&
-      (!!formData.birth_date) &&
-      (!!formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) &&
-      (!!formData.password && formData.password.length >= 8) &&
-      (!!formData.role)
-    );
-    const coachOk = formData.role !== 'athlete' ? true : (coachAvailable ? !!formData.coach_id : true);
-    const noErrors = Object.values(errors).every(v => !v);
-    return requiredOk && coachOk && noErrors;
-  }, [formData, errors, coachAvailable]);
   // const handleDemoLogin = () => {
   //   setLoading(true);
   //   setTimeout(() => {
@@ -164,10 +166,13 @@ const AuthScreen: React.FC = () => {
       if (isLogin) {
         const { error } = await authHelpers.signIn(formData.email, formData.password);
         if (error) {
-          if (error.message.includes('conexão')) {
-            alert('❌ ' + error.message + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
+          const msg = error.message || '';
+          if (msg.includes('Failed to fetch')) {
+            alert('❌ Falha de conexão com Supabase (DNS/URL inválido).\n\n💡 Dica: Abra "Configuração Supabase" na tela, informe a URL e a anon key do seu projeto no Supabase e clique em "Salvar e recarregar". Você também pode ajustar o arquivo .env.');
+          } else if (msg.includes('conexão')) {
+            alert('❌ ' + msg + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
           } else {
-            alert('Erro ao fazer login: ' + error.message);
+            alert('Erro ao fazer login: ' + msg);
           }
         }
       } else {
@@ -187,10 +192,13 @@ const AuthScreen: React.FC = () => {
           coach_id: formData.coach_id || null
         });
         if (error) {
-          if (error.message.includes('conexão')) {
-            alert('❌ ' + error.message + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
+          const msg = error.message || '';
+          if (msg.includes('Failed to fetch')) {
+            alert('❌ Falha de conexão com Supabase (DNS/URL inválido).\n\n💡 Dica: Abra "Configuração Supabase" na tela, informe a URL e a anon key do seu projeto no Supabase e clique em "Salvar e recarregar". Você também pode ajustar o arquivo .env.');
+          } else if (msg.includes('conexão')) {
+            alert('❌ ' + msg + '\n\n💡 Dica: Verifique se o Supabase está configurado corretamente no arquivo .env');
           } else {
-            alert('Erro ao criar conta: ' + error.message);
+            alert('Erro ao criar conta: ' + msg);
           }
         } else {
           alert('Conta criada com sucesso! Verifique seu email.');
@@ -204,51 +212,43 @@ const AuthScreen: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    validateField(name, value);
-    if (name === 'role' && value !== 'athlete') {
-      setFormData(prev => ({ ...prev, coach_id: '' }));
-      setErrors(prev => ({ ...prev, coach_id: '' }));
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        
-        {/* Hero Section */}
-        <div className="text-center lg:text-left space-y-8">
-          <div className="space-y-4">
-            <div className="flex items-center justify-center lg:justify-start space-x-2 mb-6">
-              <SynthoniaLogo className="h-10 w-10" size={48} />
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <SynthoniaLogo />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Synthonia</h1>
+              <p className="text-sm text-gray-600">Treinamento inteligente e bem-estar integrado</p>
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              SynthonIA AI
-            </h1>
-            <p className="text-xl text-gray-300 leading-relaxed">
-              Plataforma inteligente de monitoramento esportivo que combina ciência do treinamento com análise avançada de recuperação
-            </p>
           </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Preview: login habilita recursos básicos</p>
+          </div>
+        </div>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          <div className="space-y-4">
             <FeatureCard 
               icon={<Activity className="h-6 w-6 text-blue-600" />}
-              title="Readiness Score"
-              description="Indicador 0-100 da sua prontidão para treino"
+              title="Autoavaliação Diária"
+              description="Sono, energia, humor e recuperação"
             />
             <FeatureCard 
-              icon={<TrendingUp className="h-6 w-6 text-green-600" />}
-              title="Métricas ATL/CTL"
-              description="Análise científica de carga de treinamento"
+              icon={<Target className="h-6 w-6 text-green-600" />}
+              title="Metas e Planejamento"
+              description="Acompanhe treinos e objetivos"
             />
             <FeatureCard 
-              icon={<Target className="h-6 w-6 text-purple-600" />}
-              title="IA Coach"
-              description="Recomendações personalizadas inteligentes"
+              icon={<TrendingUp className="h-6 w-6 text-purple-600" />}
+              title="Insights e Tendências"
+              description="Análises com base em seus dados"
             />
+          </div>
+          <div className="space-y-4">
             <FeatureCard 
               icon={<Users className="h-6 w-6 text-orange-600" />}
               title="Para Equipes"
@@ -327,6 +327,7 @@ const AuthScreen: React.FC = () => {
                 <Button type="button" onClick={handleResend} className="mt-3">Reenviar e-mail de confirmação</Button>
               </div>
             )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <>
