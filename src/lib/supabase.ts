@@ -4,7 +4,7 @@
 // Versão: Supabase 2.57.4
 // AI_GENERATED_CODE_START
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { User } from '../types';
+import type { User, DailyData, TrainingSession } from '../types';
 
 // Configuração do Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -27,19 +27,40 @@ const fallbackSupabaseAnonKey = (typeof window !== 'undefined')
   ? (window.localStorage.getItem('SUPABASE_ANON_KEY') || undefined)
   : undefined;
 
-const effectiveSupabaseUrl = supabaseUrl || fallbackSupabaseUrl;
-const effectiveSupabaseAnonKey = supabaseAnonKey || fallbackSupabaseAnonKey;
+// Preferir localStorage over .env para permitir override sem rebuild
+const effectiveSupabaseUrl = fallbackSupabaseUrl || supabaseUrl;
+const effectiveSupabaseAnonKey = fallbackSupabaseAnonKey || supabaseAnonKey;
 
-// Verificação de configuração: evita erro de criação do cliente com variáveis indefinidas
-export let supabase: SupabaseClient | null = (effectiveSupabaseUrl && effectiveSupabaseAnonKey)
-  ? createClient(effectiveSupabaseUrl, effectiveSupabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
+console.info('[supabase] Fonte de configuração', {
+  sourceUrl: fallbackSupabaseUrl ? 'localStorage' : (supabaseUrl ? '.env' : 'none'),
+  sourceKey: fallbackSupabaseAnonKey ? 'localStorage' : (supabaseAnonKey ? '.env' : 'none')
+});
+
+// Export: cliente Supabase (somente após verificação de conectividade)
+export let supabase: SupabaseClient | null = null;
+
+// Verificação de conectividade: evita criar cliente quando DNS/URL estão inválidos
+const checkSupabaseConnectivity = async (url: string, key: string): Promise<boolean> => {
+  try {
+    if (!url || !key) return false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const endpoint = `${url.replace(/\/$/, '')}/auth/v1/settings`;
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        apikey: key
       },
-    })
-  : null;
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return res.ok; // 200/2xx indicam que o domínio respondeu
+  } catch (err) {
+    console.error('[supabase] Conectividade falhou', err);
+    return false;
+  }
+};
 
 // Inicialização dinâmica do Supabase em tempo de execução
 const getRuntimeConfig = async (): Promise<{ url?: string; anonKey?: string }> => {
@@ -74,27 +95,93 @@ const getRuntimeConfig = async (): Promise<{ url?: string; anonKey?: string }> =
 };
 
 export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null> => {
+  console.info('[supabase] ensureSupabaseConfigured iniciado', { supabaseExists: !!supabase });
   if (supabase) return supabase;
+
   const runtime = await getRuntimeConfig();
-  const finalUrl = effectiveSupabaseUrl || runtime.url;
-  const finalKey = effectiveSupabaseAnonKey || runtime.anonKey;
-  if (finalUrl && finalKey) {
-    supabase = createClient(finalUrl, finalKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    });
+  console.info('[supabase] Runtime config', runtime);
+
+  const candidates: Array<{ url: string; key: string; source: string }> = [];
+  if (fallbackSupabaseUrl && fallbackSupabaseAnonKey) {
+    candidates.push({ url: fallbackSupabaseUrl, key: fallbackSupabaseAnonKey, source: 'localStorage' });
   }
+  if (supabaseUrl && supabaseAnonKey) {
+    candidates.push({ url: supabaseUrl, key: supabaseAnonKey, source: '.env' });
+  }
+  if (runtime.url && runtime.anonKey) {
+    candidates.push({ url: runtime.url, key: runtime.anonKey, source: 'supabase-config.json' });
+  }
+
+  console.info('[supabase] Candidatos de configuração', candidates.map(c => ({ source: c.source, hasUrl: !!c.url, hasKey: !!c.key })));
+
+  let chosen: { url?: string; key?: string; source?: string } = {};
+  for (const c of candidates) {
+    console.info('[supabase] Testando conectividade com', c.source);
+    const reachable = await checkSupabaseConnectivity(c.url, c.key);
+    if (reachable) {
+      chosen = c;
+      break;
+    } else {
+      console.warn('[supabase] Conectividade falhou para', c.source);
+    }
+  }
+
+  if (!chosen.url || !chosen.key) {
+    // Limpar overrides inválidos para permitir UI de configuração aparecer
+    try {
+      window.localStorage.removeItem('SUPABASE_URL');
+      window.localStorage.removeItem('SUPABASE_ANON_KEY');
+    } catch (_) {}
+    console.error('[supabase] Nenhuma configuração válida encontrada. Verifique URL/anon key.');
+    return null;
+  }
+
+  // Persistir a configuração escolhida para sessões futuras
+  try {
+    window.localStorage.setItem('SUPABASE_URL', chosen.url!);
+    window.localStorage.setItem('SUPABASE_ANON_KEY', chosen.key!);
+  } catch (_) {}
+
+  console.info('[supabase] Conectividade OK via', chosen.source, '. Criando cliente Supabase');
+  supabase = createClient(chosen.url!, chosen.key!, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+  });
+  console.info('[supabase] Cliente criado com sucesso');
+
   return supabase;
 };
 
 // Helpers de Autenticação
+const mapAuthErrorMessage = (err: any): string => {
+  const raw = (err?.message || '').toLowerCase();
+  if (raw.includes('service is unavailable') || raw.includes('service unavailable')) {
+    return 'Serviço de e-mail indisponível no Supabase. Configure um provider em Authentication → Email (SMTP), ou desative "Confirm email" em desenvolvimento.';
+  }
+  if (raw.includes('redirect_to not allowed') || raw.includes('redirect to not allowed')) {
+    return 'URL de redirecionamento não permitida. Inclua "http://localhost:5177/" (dev) e seu domínio em Authentication → URL Configuration.';
+  }
+  if (raw.includes('rate limit')) {
+    return 'Limite de taxa atingido. Aguarde alguns minutos antes de tentar novamente.';
+  }
+  if (raw.includes('invalid email') || raw.includes('invalid login credentials')) {
+    return 'Credenciais inválidas. Verifique o e-mail e a senha.';
+  }
+  return err?.message || 'Erro de autenticação no Supabase.';
+};
+
 export const authHelpers = {
   async signUp(email: string, password: string, userData: any) {
-    await ensureSupabaseConfigured();
-    if (!supabase) {
+    console.info('[auth] signUp iniciado', { email, userData });
+
+    const client = await ensureSupabaseConfigured();
+    console.info('[auth] Supabase configurado?', { supabase: !!client });
+
+    if (!client) {
+      console.error('[auth] Supabase não configurado');
       return {
         data: null,
         error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
@@ -102,14 +189,20 @@ export const authHelpers = {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const redirectUrl = resolveRedirectUrl();
+      console.info('[auth] Tentando signUp', { email, redirectUrl });
+
+      const { data, error } = await client.auth.signUp({
         email,
         password,
         options: {
           data: userData,
-          emailRedirectTo: resolveRedirectUrl(),
+          emailRedirectTo: redirectUrl,
         }
       });
+      if (error) {
+        return { data: null, error: { message: mapAuthErrorMessage(error) } } as any;
+      }
       console.info('[auth] signUp result', { data, error });
       return { data, error };
     } catch (networkError) {
@@ -124,36 +217,41 @@ export const authHelpers = {
   },
 
   async signIn(email: string, password: string) {
-    await ensureSupabaseConfigured();
-    if (!supabase) {
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Falha de conexão com Supabase. Verifique URL/anon key.' } };
     }
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
       return { data, error };
     } catch (networkError) {
-      return {
-        data: null,
-        error: {
-          message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.'
-        }
-      };
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } };
+    }
+  },
+
+  async resendSignupEmail(email: string) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } };
+    }
+    try {
+      const redirectUrl = resolveRedirectUrl();
+      const { data, error } = await client.auth.resend({ type: 'signup', email, redirectTo: redirectUrl });
+      if (error) {
+        return { data: null, error: { message: mapAuthErrorMessage(error) } } as any;
+      }
+      return { data, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
     }
   },
 
   async signOut() {
-    await ensureSupabaseConfigured();
-    if (!supabase) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
       return { error: { message: 'Supabase não configurado.' } };
     }
-    const { error } = await supabase.auth.signOut();
+    const { error } = await client.auth.signOut();
     return { error };
   },
 
@@ -165,124 +263,9 @@ export const authHelpers = {
     return user;
   },
 
-  async resendSignupEmail(email: string) {
-    await ensureSupabaseConfigured();
-    if (!supabase) {
-      return { error: { message: 'Supabase não configurado.' } };
-    }
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-        options: {
-          emailRedirectTo: resolveRedirectUrl(),
-        },
-      });
-      console.info('[auth] resend signup email', { email, error });
-      return { error };
-    } catch (networkError) {
-      console.error('[auth] resend network error', networkError);
-      return { error: { message: 'Erro de conexão com o servidor.' } };
-    }
-  },
-};
-
-// Helpers de Banco de Dados
-export const dbHelpers = {
-  async insertDailyData(data: any) {
-    if (!supabase) {
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
-    }
-    const { data: result, error } = await supabase
-      .from('daily_data')
-      .insert([
-        {
-          user_id: data.user_id,
-          date: data.date,
-          sleep_quality: data.sleep_quality,
-          fatigue_level: data.fatigue_level,
-          mood: data.mood,
-          muscle_soreness: data.muscle_soreness,
-          stress_level: data.stress_level,
-          resting_hr: data.resting_hr ?? null,
-          hrv: data.hrv ?? null,
-          tqr: data.tqr ?? null,
-          psr: data.psr ?? null,
-          sleep_duration: data.sleep_duration ?? null,
-          sleep_regularity: data.sleep_regularity ?? null,
-          exhaustion: data.exhaustion ?? null,
-          readiness_score: data.readiness_score ?? null,
-        },
-      ])
-      .select();
-    return { data: result, error };
-  },
-
-  async getDailyData(userId: string, days: number = 30) {
-    if (!supabase) {
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
-    }
-    const { data, error } = await supabase
-      .from('daily_data')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
-      .order('date', { ascending: false });
-    return { data, error };
-  },
-
-  async insertTrainingSession(session: any) {
-    if (!supabase) {
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
-    }
-    const { data: result, error } = await supabase
-      .from('training_sessions')
-      .insert([
-        {
-          user_id: session.user_id,
-          date: session.date,
-          duration: session.duration,
-          rpe: session.rpe,
-          training_type: session.training_type,
-          volume: session.volume ?? null,
-          intensity: session.intensity ?? null,
-          tss: session.tss ?? 0,
-          trimp: session.trimp ?? 0,
-          pse: session.pse ?? null,
-          notes: session.notes ?? null,
-        },
-      ])
-      .select();
-    return { data: result, error };
-  },
-
-  async getTrainingSessions(userId: string, days: number = 30) {
-    if (!supabase) {
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
-    }
-    const { data, error } = await supabase
-      .from('training_sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
-      .order('date', { ascending: false });
-    return { data, error };
-  },
-
   async updateUserProfile(updates: Partial<User> & { id: string }) {
-    if (!supabase) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
       return { data: null, error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' } };
     }
     const payload: any = {
@@ -295,7 +278,7 @@ export const dbHelpers = {
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('users')
       .upsert(payload, { onConflict: 'id' })
       .select();
@@ -304,3 +287,118 @@ export const dbHelpers = {
   }
 };
 // AI_GENERATED_CODE_END
+export const dbHelpers = {
+  async getDailyData(userId: string, days: number = 30) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+    }
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      const startISO = startDate.toISOString().split('T')[0];
+      const endISO = endDate.toISOString().split('T')[0];
+
+      const { data, error } = await client
+        .from('daily_data')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', startISO)
+        .lte('date', endISO)
+        .order('date', { ascending: false });
+
+      return { data: data as DailyData[] | null, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+    }
+  },
+
+  async getTrainingSessions(userId: string, days: number = 30) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+    }
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      const startISO = startDate.toISOString().split('T')[0];
+      const endISO = endDate.toISOString().split('T')[0];
+
+      const { data, error } = await client
+        .from('training_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', startISO)
+        .lte('date', endISO)
+        .order('date', { ascending: false });
+
+      return { data: data as TrainingSession[] | null, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+    }
+  },
+
+  async insertDailyData(entry: Partial<DailyData>) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+    }
+    try {
+      const { data, error } = await client
+        .from('daily_data')
+        .insert(entry)
+        .select()
+        .single();
+      return { data, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+    }
+  },
+
+  async insertTrainingSession(entry: Partial<TrainingSession>) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+    }
+    try {
+      const { data, error } = await client
+        .from('training_sessions')
+        .insert(entry)
+        .select()
+        .single();
+      return { data, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+    }
+  },
+
+  async updateUserProfile(updates: Partial<User> & { id: string }) {
+    const client = await ensureSupabaseConfigured();
+    if (!client) {
+      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+    }
+    try {
+      const payload: any = {
+        id: updates.id,
+        name: updates.name,
+        email: updates.email,
+        birth_date: updates.birth_date,
+        role: updates.role,
+        avatar_url: updates.avatar_url,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await client
+        .from('users')
+        .upsert(payload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      return { data, error } as any;
+    } catch (networkError) {
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+    }
+  }
+};
