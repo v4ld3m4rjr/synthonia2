@@ -27,6 +27,7 @@ import { Button } from '../ui/Button';
 import TimeSelector, { TimePeriod } from '../ui/TimeSelector';
 
 import { Plus, Calendar, TrendingUp, Target, Brain, Activity, Moon } from 'lucide-react';
+import ErrorBoundary from '../ErrorBoundary';
 
 interface DashboardProps {
   user: User;
@@ -176,11 +177,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </Button>
           </div>
           <div className="w-screen relative left-1/2 -translate-x-1/2 px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden">
-            <AnalyticsView 
-              user={user}
-              dailyData={dailyData}
-              trainingSessions={trainingSessions}
-            />
+            <ErrorBoundary fallback={
+              <div className="p-6 bg-red-900/20 border border-red-500 rounded-lg text-red-300">
+                <div className="font-semibold mb-2">Erro ao abrir Análises</div>
+                <div className="text-sm">Verifique sua configuração do Supabase e tente novamente. Em dev, veja o console.</div>
+              </div>
+            }>
+              <AnalyticsView 
+                user={user}
+                dailyData={dailyData}
+                trainingSessions={trainingSessions}
+              />
+            </ErrorBoundary>
           </div>
         </main>
       </div>

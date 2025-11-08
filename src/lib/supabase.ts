@@ -308,9 +308,18 @@ export const dbHelpers = {
         .lte('date', endISO)
         .order('date', { ascending: false });
 
-      return { data: data as DailyData[] | null, error } as any;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.warn('[supabase] daily_data retornou erro', error);
+          if ((error as any)?.code === '404' || /404/.test((error as any)?.message || '')) {
+            console.warn('[supabase] Tabela daily_data não encontrada ou sem permissão (404). Retornando lista vazia para evitar quebra da UI.');
+          }
+        }
+      }
+
+      return { data: (data as DailyData[] | null) || [], error } as any;
     } catch (networkError) {
-      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+      return { data: [], error: { message: 'Erro de conexão com Supabase.' } } as any;
     }
   },
 
@@ -334,9 +343,18 @@ export const dbHelpers = {
         .lte('date', endISO)
         .order('date', { ascending: false });
 
-      return { data: data as TrainingSession[] | null, error } as any;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.warn('[supabase] training_sessions retornou erro', error);
+          if ((error as any)?.code === '404' || /404/.test((error as any)?.message || '')) {
+            console.warn('[supabase] Tabela training_sessions não encontrada ou sem permissão (404). Retornando lista vazia para evitar quebra da UI.');
+          }
+        }
+      }
+
+      return { data: (data as TrainingSession[] | null) || [], error } as any;
     } catch (networkError) {
-      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
+      return { data: [], error: { message: 'Erro de conexão com Supabase.' } } as any;
     }
   },
 
