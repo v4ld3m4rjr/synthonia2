@@ -29,7 +29,7 @@ export default defineConfig({
       // CSP permissiva apenas para desenvolvimento para permitir HMR e eval
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: https:",
         "connect-src 'self' http: https: ws: wss:",
@@ -45,7 +45,7 @@ export default defineConfig({
       // CSP mais restrita para preview (quase produção), sem unsafe-eval
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: https:",
         "connect-src 'self' https: wss:",
