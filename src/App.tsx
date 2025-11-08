@@ -19,34 +19,49 @@ function App() {
   const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   useEffect(() => {
-    // Garantir que o cliente Supabase esteja configurado antes de ler sessão e escutar auth
-    ensureSupabaseConfigured().then((client) => {
-      if (!client) {
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
+
+    const init = async () => {
+      try {
+        const client = await ensureSupabaseConfigured();
+        if (!active) return;
+        if (!client) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: { session } } = await client.auth.getSession();
+        if (!active) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+
+        const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+          if (!active) return;
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            fetchUserProfile(session.user.id);
+          } else {
+            setUserProfile(null);
+            setLoading(false);
+          }
+        });
+        unsubscribe = () => subscription.unsubscribe();
+      } catch (err) {
         setLoading(false);
-        return;
       }
+    };
 
-      client.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchUserProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
-      });
+    init();
 
-      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchUserProfile(session.user.id);
-        } else {
-          setUserProfile(null);
-          setLoading(false);
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    });
+    return () => {
+      active = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
