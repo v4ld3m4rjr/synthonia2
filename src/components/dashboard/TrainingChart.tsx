@@ -4,7 +4,7 @@
 // Versão: React 18.3.1
 // AI_GENERATED_CODE_START
 import React from 'react';
-import { LineChart } from '../charts';
+const LineChart = React.lazy(() => import('../charts/LineChart'));
 
 interface DataPoint {
   x: string;
@@ -47,14 +47,16 @@ const TrainingChart: React.FC<TrainingChartProps> = ({
     <div className="w-full">
       <h4 className="text-sm font-medium text-gray-700 mb-4">{title}</h4>
       <div className="w-full">
-        <LineChart 
-          data={processedData}
-          width="100%"
-          height={200}
-          color={color}
-          showGrid={true}
-          showDots={true}
-        />
+        <React.Suspense fallback={<div className="h-48 flex items-center justify-center text-gray-500">Carregando gráfico…</div>}>
+          <LineChart 
+            data={processedData}
+            width="100%"
+            height={200}
+            color={color}
+            showGrid={true}
+            showDots={true}
+          />
+        </React.Suspense>
       </div>
     </div>
   );

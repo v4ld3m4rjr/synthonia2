@@ -4,7 +4,9 @@ import { calculateMetricsTimeSeries, calculateTotalWorkVolume, calculateTrend } 
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import TimeSelector, { TimePeriod } from '../ui/TimeSelector';
-import { LineChart, BarChart, MultiLineChart } from '../charts';
+const LineChart = React.lazy(() => import('../charts/LineChart'));
+const BarChart = React.lazy(() => import('../charts/BarChart'));
+const MultiLineChart = React.lazy(() => import('../charts/MultiLineChart'));
 import MetricsSelector, { getDefaultMetrics } from './MetricsSelector';
 import NeurophysiologyExplainer from '../ai/NeurophysiologyExplainer';
 import { 
@@ -302,14 +304,16 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   />
                 </div>
               )}
-              <MultiLineChart
-                series={performanceSeries}
-                height={300}
-                darkTheme={true}
-                showGrid={true}
-                showDots={true}
-                showLegend={true}
-              />
+              <React.Suspense fallback={<div className="h-72 flex items-center justify-center text-gray-400">Carregando gráfico…</div>}>
+                <MultiLineChart
+                  series={performanceSeries}
+                  height={300}
+                  darkTheme={true}
+                  showGrid={true}
+                  showDots={true}
+                  showLegend={true}
+                />
+              </React.Suspense>
             </CardContent>
           </Card>
 
@@ -320,14 +324,16 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               <p className="text-sm text-gray-400">Distribuição diária do Training Stress Score</p>
             </CardHeader>
             <CardContent>
-              <BarChart
-                data={dashboardData.map(d => ({
-                  label: d.date,
-                  value: d.tss
-                }))}
-                height={300}
-                color="#3B82F6"
-              />
+              <React.Suspense fallback={<div className="h-72 flex items-center justify-center text-gray-400">Carregando gráfico…</div>}>
+                <BarChart
+                  data={dashboardData.map(d => ({
+                    label: d.date,
+                    value: d.tss
+                  }))}
+                  height={300}
+                  color="#3B82F6"
+                />
+              </React.Suspense>
             </CardContent>
           </Card>
         </div>
