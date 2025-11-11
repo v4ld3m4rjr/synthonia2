@@ -16,11 +16,12 @@ export default defineConfig({
   server: {
     host: true,
     port: 5177,
-    strictPort: true,
+    // Permitir troca de porta quando em uso e deixar HMR seguir a porta ativa
+    strictPort: false,
     hmr: {
       protocol: 'ws',
-      host: 'localhost',
-      port: 5177,
+      host: 'localhost'
+      // não definir porta para que use a mesma do servidor
     },
     fs: {
       allow: ['..']

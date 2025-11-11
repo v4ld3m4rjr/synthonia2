@@ -96,6 +96,11 @@ const getRuntimeConfig = async (): Promise<{ url?: string; anonKey?: string }> =
 
 export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null> => {
   console.info('[supabase] ensureSupabaseConfigured iniciado', { supabaseExists: !!supabase });
++  // Modo offline: se não houver internet, trabalhe apenas com dados locais
++  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
++    console.warn('[supabase] Offline detectado; operando em modo local sem cliente Supabase.');
++    return null;
++  }
   if (supabase) return supabase;
 
   const runtime = await getRuntimeConfig();
@@ -132,7 +137,8 @@ export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null>
       window.localStorage.removeItem('SUPABASE_URL');
       window.localStorage.removeItem('SUPABASE_ANON_KEY');
     } catch (_) {}
-    console.error('[supabase] Nenhuma configuração válida encontrada. Verifique URL/anon key.');
+-    console.error('[supabase] Nenhuma configuração válida encontrada. Verifique URL/anon key.');
++    console.warn('[supabase] Nenhuma configuração Supabase válida. Continuando em modo local.');
     return null;
   }
 
@@ -289,10 +295,11 @@ export const authHelpers = {
 // AI_GENERATED_CODE_END
 export const dbHelpers = {
   async getDailyData(userId: string, days: number = 30) {
-    const client = await ensureSupabaseConfigured();
-    if (!client) {
-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
-    }
+-    const client = await ensureSupabaseConfigured();
+-    if (!client) {
+-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+-    }
++    const client = await ensureSupabaseConfigured();
     try {
       const endDate = new Date();
       const startDate = new Date();
@@ -300,6 +307,21 @@ export const dbHelpers = {
       const startISO = startDate.toISOString().split('T')[0];
       const endISO = endDate.toISOString().split('T')[0];
 
++      // Se cliente não existir (offline ou sem configuração), retornar somente dados locais
++      if (!client) {
++        let local: any[] = [];
++        try {
++          const key = `daily_data_local_${userId}`;
++          local = JSON.parse(localStorage.getItem(key) || '[]');
++        } catch {}
++        const localFiltered = local.filter((e: any) => {
++          const d = e?.date;
++          return typeof d === 'string' && d >= startISO && d <= endISO;
++        });
++        const merged = [...localFiltered].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
++        return { data: merged, error: null } as any;
++      }
++
       const { data, error } = await client
         .from('daily_data')
         .select('*')
@@ -339,10 +361,11 @@ export const dbHelpers = {
   },
 
   async getTrainingSessions(userId: string, days: number = 30) {
-    const client = await ensureSupabaseConfigured();
-    if (!client) {
-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
-    }
+-    const client = await ensureSupabaseConfigured();
+-    if (!client) {
+-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+-    }
++    const client = await ensureSupabaseConfigured();
     try {
       const endDate = new Date();
       const startDate = new Date();
@@ -350,6 +373,23 @@ export const dbHelpers = {
       const startISO = startDate.toISOString().split('T')[0];
       const endISO = endDate.toISOString().split('T')[0];
 
++      if (!client) {
++        let local: any[] = [];
++        try {
++          const key = `training_sessions_local_${userId}`;
++          local = JSON.parse(localStorage.getItem(key) || '[]');
++        } catch {}
++        const localFiltered = local.filter((e: any) => {
++          const d = e?.date;
++          return typeof d === 'string' && d >= startISO && d <= endISO;
++        });
++        const signature = (e: any) => `${e.user_id}|${e.date}|${e.duration || ''}|${e.rpe || ''}`;
++        const merged = [...localFiltered]
++          .filter((e: any, idx, arr) => arr.findIndex(x => signature(x) === signature(e)) === idx)
++          .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
++        return { data: merged, error: null } as any;
++      }
++
       const { data, error } = await client
         .from('training_sessions')
         .select('*')

@@ -161,14 +161,18 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
       const { error: dailyError } = await dbHelpers.insertDailyData(dailyDataEntry);
       if (dailyError) {
         const msg = dailyError.message || '';
-        const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
-        if (isSchemaMissing) {
+-        const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
++        const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
++        const isConnectivity = /Supabase não configurado|Erro de conexão com Supabase|Failed to fetch|net::ERR/i.test(msg);
+-        if (isSchemaMissing) {
++        if (isSchemaMissing || isConnectivity) {
           const ok = saveLocalDailyData(dailyDataEntry);
           if (!ok) {
             throw new Error('Erro ao salvar dados diários localmente.');
           }
           if (import.meta.env.DEV) {
-            console.warn('Supabase indisponível para daily_data. Entrada salva localmente.');
+-            console.warn('Supabase indisponível para daily_data. Entrada salva localmente.');
++            console.warn('Supabase indisponível (schema/conectividade). Entrada salva localmente.');
           }
         } else {
           throw new Error('Erro ao salvar dados diários: ' + msg);
@@ -198,14 +202,18 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
         const { error: trainingError } = await dbHelpers.insertTrainingSession(trainingSession);
         if (trainingError) {
           const msg = trainingError.message || '';
-          const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
-          if (isSchemaMissing) {
+-          const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
++          const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
++          const isConnectivity = /Supabase não configurado|Erro de conexão com Supabase|Failed to fetch|net::ERR/i.test(msg);
+-          if (isSchemaMissing) {
++          if (isSchemaMissing || isConnectivity) {
             const ok = saveLocalTrainingSession(trainingSession);
             if (!ok) {
               alert('Falha ao salvar sessão de treino localmente.');
             }
             if (import.meta.env.DEV) {
-              console.warn('Supabase indisponível para training_sessions. Sessão salva localmente.');
+-              console.warn('Supabase indisponível para training_sessions. Sessão salva localmente.');
++              console.warn('Supabase indisponível (schema/conectividade). Sessão salva localmente.');
             }
           } else if (import.meta.env.DEV) {
             console.warn('Erro ao salvar sessão de treino:', msg);
