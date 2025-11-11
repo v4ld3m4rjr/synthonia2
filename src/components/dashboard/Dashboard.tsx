@@ -29,6 +29,8 @@ import TimeSelector, { TimePeriod } from '../ui/TimeSelector';
 import { Plus, Calendar, TrendingUp, Target, Brain, Activity, Moon } from 'lucide-react';
 import ErrorBoundary from '../ErrorBoundary';
 
+import FullAIAnalysis from '../ai/FullAIAnalysis';
+
 interface DashboardProps {
   user: User;
   onLogout: () => void;
@@ -277,7 +279,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               ← Voltar ao Dashboard
             </Button>
           </div>
-          <ResultsAnalysisPage />
+-          <ResultsAnalysisPage />
++          <FullAIAnalysis user={editableUser} dailyData={dailyData} trainingSessions={trainingSessions} />
         </main>
       </div>
     );

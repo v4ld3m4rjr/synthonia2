@@ -317,7 +317,22 @@ export const dbHelpers = {
         }
       }
 
-      return { data: (data as DailyData[] | null) || [], error } as any;
+      // Mesclar dados locais (fallback) com os remotos
+      const remote = (data as DailyData[] | null) || [];
+      let local: any[] = [];
+      try {
+        const key = `daily_data_local_${userId}`;
+        local = JSON.parse(localStorage.getItem(key) || '[]');
+      } catch {}
+      const localFiltered = local.filter((e: any) => {
+        const d = e?.date;
+        return typeof d === 'string' && d >= startISO && d <= endISO;
+      });
+      const dedup = new Set(remote.map(r => `${r.user_id}|${r.date}`));
+      const merged = [...remote, ...localFiltered.filter((e: any) => !dedup.has(`${e.user_id}|${e.date}`))]
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+      return { data: merged, error } as any;
     } catch (networkError) {
       return { data: [], error: { message: 'Erro de conexão com Supabase.' } } as any;
     }
@@ -352,7 +367,23 @@ export const dbHelpers = {
         }
       }
 
-      return { data: (data as TrainingSession[] | null) || [], error } as any;
+      // Mesclar dados locais (fallback) com os remotos
+      const remote = (data as TrainingSession[] | null) || [];
+      let local: any[] = [];
+      try {
+        const key = `training_sessions_local_${userId}`;
+        local = JSON.parse(localStorage.getItem(key) || '[]');
+      } catch {}
+      const localFiltered = local.filter((e: any) => {
+        const d = e?.date;
+        return typeof d === 'string' && d >= startISO && d <= endISO;
+      });
+      const signature = (e: any) => `${e.user_id}|${e.date}|${e.duration || ''}|${e.rpe || ''}`;
+      const dedup = new Set(remote.map(signature));
+      const merged = [...remote, ...localFiltered.filter((e: any) => !dedup.has(signature(e)))]
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+      return { data: merged, error } as any;
     } catch (networkError) {
       return { data: [], error: { message: 'Erro de conexão com Supabase.' } } as any;
     }

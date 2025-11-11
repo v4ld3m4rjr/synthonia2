@@ -47,6 +47,31 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     pse: 5 // Percepção Subjetiva de Esforço (0-10)
   });
 
+  // Fallback local quando Supabase não tem tabelas configuradas
+  const saveLocalDailyData = (entry: Partial<DailyData>) => {
+    try {
+      const key = `daily_data_local_${user.id}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push(entry);
+      localStorage.setItem(key, JSON.stringify(existing));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const saveLocalTrainingSession = (entry: any) => {
+    try {
+      const key = `training_sessions_local_${user.id}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push(entry);
+      localStorage.setItem(key, JSON.stringify(existing));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const steps = [
     {
       title: 'Como você dormiu?',
@@ -107,7 +132,6 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Calcular TSS do treino se foi informado
       let tss = 0;
       if (formData.training_duration && formData.training_rpe) {
         tss = calculateTSS(parseInt(formData.training_duration), formData.training_rpe);
@@ -124,23 +148,33 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
         mood: formData.mood,
         muscle_soreness: formData.muscle_soreness,
         stress_level: formData.stress_level,
-        tqr: formData.tqr, // Total Quality Recovery (0-10)
-        psr: formData.psr, // Perceived Stress and Recovery
+        tqr: formData.tqr,
+        psr: formData.psr,
         resting_hr: formData.resting_hr ? parseInt(formData.resting_hr) : null,
         rpe: formData.training_rpe,
         training_duration: formData.training_duration ? parseInt(formData.training_duration) : null,
         training_intensity: formData.training_intensity,
-        readiness_score: 0, // Será calculado automaticamente
+        readiness_score: 0,
         created_at: new Date().toISOString()
       };
 
       const { error: dailyError } = await dbHelpers.insertDailyData(dailyDataEntry);
-      
       if (dailyError) {
-        throw new Error('Erro ao salvar dados diários: ' + dailyError.message);
+        const msg = dailyError.message || '';
+        const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
+        if (isSchemaMissing) {
+          const ok = saveLocalDailyData(dailyDataEntry);
+          if (!ok) {
+            throw new Error('Erro ao salvar dados diários localmente.');
+          }
+          if (import.meta.env.DEV) {
+            console.warn('Supabase indisponível para daily_data. Entrada salva localmente.');
+          }
+        } else {
+          throw new Error('Erro ao salvar dados diários: ' + msg);
+        }
       }
 
-      // Salvar sessão de treino se foi informada
       if (formData.training_duration && formData.training_rpe) {
         const durationMinutes = parseInt(formData.training_duration);
         const estimatedAvgHR = formData.resting_hr
@@ -150,7 +184,7 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
 
         const trainingSession = {
           user_id: user.id,
-          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Dia anterior
+          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           duration: durationMinutes,
           rpe: formData.training_rpe,
           training_type: formData.training_type || 'Geral',
@@ -162,14 +196,26 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
         };
 
         const { error: trainingError } = await dbHelpers.insertTrainingSession(trainingSession);
-        
         if (trainingError) {
-          if (import.meta.env.DEV) {
-            console.warn('Erro ao salvar sessão de treino:', trainingError.message);
+          const msg = trainingError.message || '';
+          const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
+          if (isSchemaMissing) {
+            const ok = saveLocalTrainingSession(trainingSession);
+            if (!ok) {
+              alert('Falha ao salvar sessão de treino localmente.');
+            }
+            if (import.meta.env.DEV) {
+              console.warn('Supabase indisponível para training_sessions. Sessão salva localmente.');
+            }
+          } else if (import.meta.env.DEV) {
+            console.warn('Erro ao salvar sessão de treino:', msg);
           }
         }
       }
 
+      if (import.meta.env.DEV) {
+        console.info('Avaliação salva com sucesso (Supabase ou local).');
+      }
       onComplete();
       
     } catch (error) {
