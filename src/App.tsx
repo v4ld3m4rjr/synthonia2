@@ -27,6 +27,21 @@ function App() {
         const client = await ensureSupabaseConfigured();
         if (!active) return;
         if (!client) {
+          // Fallback: tentar recuperar usuário local (modo offline)
+          try {
+            const localUser = await authHelpers.getCurrentUser();
+            if (localUser) {
+              setUser(localUser as any);
+              setUserProfile({
+                id: (localUser as any).id,
+                email: (localUser as any).email || '',
+                name: ((localUser as any).user_metadata?.name) || 'Usuário',
+                role: (((localUser as any).user_metadata?.role) || 'athlete') as any,
+                created_at: new Date().toISOString(),
+                avatar_url: ((localUser as any).user_metadata?.avatar_url) || null
+              } as any);
+            }
+          } catch (_) {}
           setLoading(false);
           return;
         }
@@ -52,6 +67,21 @@ function App() {
         });
         unsubscribe = () => subscription.unsubscribe();
       } catch (err) {
+        // Se Supabase falhar, ainda tentar modo local
+        try {
+          const localUser = await authHelpers.getCurrentUser();
+          if (localUser) {
+            setUser(localUser as any);
+            setUserProfile({
+              id: (localUser as any).id,
+              email: (localUser as any).email || '',
+              name: ((localUser as any).user_metadata?.name) || 'Usuário',
+              role: (((localUser as any).user_metadata?.role) || 'athlete') as any,
+              created_at: new Date().toISOString(),
+              avatar_url: ((localUser as any).user_metadata?.avatar_url) || null
+            } as any);
+          }
+        } catch (_) {}
         setLoading(false);
       }
     };
@@ -68,6 +98,18 @@ function App() {
     try {
       const client = supabase || await ensureSupabaseConfigured();
       if (!client) {
+        // Fallback: construir perfil a partir do usuário local
+        const localUser = await authHelpers.getCurrentUser();
+        if (localUser) {
+          setUserProfile({
+            id: (localUser as any).id || userId,
+            email: (localUser as any).email || '',
+            name: ((localUser as any).user_metadata?.name) || 'Usuário',
+            role: (((localUser as any).user_metadata?.role) || 'athlete') as any,
+            created_at: new Date().toISOString(),
+            avatar_url: ((localUser as any).user_metadata?.avatar_url) || null
+          } as any);
+        }
         setLoading(false);
         return;
       }

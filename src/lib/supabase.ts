@@ -175,6 +175,15 @@ const mapAuthErrorMessage = (err: any): string => {
   if (raw.includes('invalid email') || raw.includes('invalid login credentials')) {
     return 'Credenciais inválidas. Verifique o e-mail e a senha.';
   }
+  if (raw.includes('row level security') || raw.includes('rls')) {
+    return 'Políticas de RLS bloqueando acesso à tabela. Aplique migrações e políticas em public.users.';
+  }
+  if (raw.includes('relation "users" does not exist') || (raw.includes('relation') && raw.includes('users') && raw.includes('does not exist'))) {
+    return 'Tabela public.users inexistente. Execute as migrações SQL de criação de tabela e trigger.';
+  }
+  if (raw.includes('permission denied')) {
+    return 'Permissão negada ao acessar public.users. Verifique RLS e autenticação.';
+  }
   return err?.message || 'Erro de autenticação no Supabase.';
 };
 
@@ -186,11 +195,26 @@ export const authHelpers = {
     console.info('[auth] Supabase configurado?', { supabase: !!client });
 
     if (!client) {
-      console.error('[auth] Supabase não configurado');
-      return {
-        data: null,
-        error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' }
-      };
+      // Fallback local de cadastro quando Supabase não está disponível
+      try {
+        const id = (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+          ? (crypto as any).randomUUID()
+          : `local-${Math.random().toString(36).slice(2)}`;
+        const localUser: any = {
+          id,
+          email,
+          user_metadata: { ...userData },
+          created_at: new Date().toISOString(),
+          provider: 'local'
+        };
+        try {
+          localStorage.setItem('LOCAL_AUTH_USER', JSON.stringify({ ...localUser, password }));
+        } catch (_) {}
+        console.warn('[auth] Supabase indisponível. Conta local criada.');
+        return { data: { user: localUser }, error: null } as any;
+      } catch (err) {
+        return { data: null, error: { message: 'Falha ao criar conta local.' } } as any;
+      }
     }
 
     try {
@@ -224,20 +248,31 @@ export const authHelpers = {
   async signIn(email: string, password: string) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      return { data: null, error: { message: 'Falha de conexão com Supabase. Verifique URL/anon key.' } };
+      // Login local: validar contra conta local, se existir
+      try {
+        const raw = localStorage.getItem('LOCAL_AUTH_USER');
+        const local = raw ? JSON.parse(raw) : null;
+        if (local && local.email === email && (!local.password || local.password === password)) {
+          const user = { id: local.id, email: local.email, user_metadata: local.user_metadata, provider: 'local' } as any;
+          return { data: { user }, error: null } as any;
+        }
+        return { data: null, error: { message: 'Conta local não encontrada. Configure Supabase ou crie conta local.' } } as any;
+      } catch (_) {
+        return { data: null, error: { message: 'Falha ao acessar conta local.' } } as any;
+      }
     }
     try {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       return { data, error };
     } catch (networkError) {
-      return { data: null, error: { message: 'Erro de conexão com Supabase.' } };
+      return { data: null, error: { message: 'Erro de conexão com Supabase.' } } as any;
     }
   },
 
   async resendSignupEmail(email: string) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      return { error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } };
+      return { error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
     }
     try {
       const redirectUrl = resolveRedirectUrl();
@@ -254,7 +289,8 @@ export const authHelpers = {
   async signOut() {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      return { error: { message: 'Supabase não configurado.' } };
+      try { localStorage.removeItem('LOCAL_AUTH_USER'); } catch (_) {}
+      return { error: null } as any;
     }
     const { error } = await client.auth.signOut();
     return { error };
@@ -262,33 +298,17 @@ export const authHelpers = {
 
   async getCurrentUser() {
     if (!supabase) {
+      try {
+        const raw = localStorage.getItem('LOCAL_AUTH_USER');
+        const local = raw ? JSON.parse(raw) : null;
+        if (local) {
+          return { id: local.id, email: local.email, user_metadata: local.user_metadata } as any;
+        }
+      } catch (_) {}
       return null;
     }
     const { data: { user } } = await supabase.auth.getUser();
     return user;
-  },
-
-  async updateUserProfile(updates: Partial<User> & { id: string }) {
-    const client = await ensureSupabaseConfigured();
-    if (!client) {
-      return { data: null, error: { message: 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' } };
-    }
-    const payload: any = {
-      id: updates.id,
-      name: updates.name,
-      email: updates.email,
-      birth_date: updates.birth_date,
-      role: updates.role,
-      avatar_url: updates.avatar_url,
-      updated_at: new Date().toISOString()
-    };
-
-    const { data, error } = await client
-      .from('users')
-      .upsert(payload, { onConflict: 'id' })
-      .select();
-
-    return { data, error };
   }
 };
 // AI_GENERATED_CODE_END
@@ -423,7 +443,21 @@ export const dbHelpers = {
   async insertDailyData(entry: Partial<DailyData>) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+      // Fallback local: salvar em localStorage quando Supabase indisponível
+      try {
+        const userId = String(entry.user_id || 'unknown');
+        const key = `daily_data_local_${userId}`;
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const withDefaults = {
+          ...entry,
+          date: entry.date || new Date().toISOString().split('T')[0]
+        };
+        existing.push(withDefaults);
+        localStorage.setItem(key, JSON.stringify(existing));
+        return { data: withDefaults, error: null } as any;
+      } catch (_) {
+        return { data: null, error: { message: 'Supabase não configurado e falha ao salvar localmente.' } } as any;
+      }
     }
     try {
       const { data, error } = await client
@@ -440,7 +474,21 @@ export const dbHelpers = {
   async insertTrainingSession(entry: Partial<TrainingSession>) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      return { data: null, error: { message: 'Supabase não configurado. Ajuste URL/anon key.' } } as any;
+      // Fallback local: salvar em localStorage quando Supabase indisponível
+      try {
+        const userId = String(entry.user_id || 'unknown');
+        const key = `training_sessions_local_${userId}`;
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const withDefaults = {
+          ...entry,
+          date: entry.date || new Date().toISOString().split('T')[0]
+        };
+        existing.push(withDefaults);
+        localStorage.setItem(key, JSON.stringify(existing));
+        return { data: withDefaults, error: null } as any;
+      } catch (_) {
+        return { data: null, error: { message: 'Supabase não configurado e falha ao salvar localmente.' } } as any;
+      }
     }
     try {
       const { data, error } = await client
