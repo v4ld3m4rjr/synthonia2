@@ -5,6 +5,23 @@
 // AI_GENERATED_CODE_START
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { User, DailyData, TrainingSession } from '../types';
+
+// Configuração do Supabase
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const authRedirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL;
+
+// Resolve dinamicamente a URL de redirecionamento (origem atual) para evitar portas incorretas
+const resolveRedirectUrl = (): string | undefined => {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/`;
+  }
+  return authRedirectUrl || undefined;
+};
+
+// Fallback: permitir configuração via localStorage quando env não estiverem definidos (útil em preview)
+const fallbackSupabaseUrl = (typeof window !== 'undefined')
+  ? (window.localStorage.getItem('SUPABASE_URL') || undefined)
   : undefined;
 const fallbackSupabaseAnonKey = (typeof window !== 'undefined')
   ? (window.localStorage.getItem('SUPABASE_ANON_KEY') || undefined)
