@@ -1,7 +1,7 @@
 // [AI Generated] Data: 19/01/2025
-// DescriÃ§Ã£o: FormulÃ¡rio de avaliaÃ§Ã£o diÃ¡ria completo
+// Descri+º+úo: Formul+írio de avalia+º+úo di+íria completo
 // Gerado por: Cursor AI
-// VersÃ£o: React 18.3.1
+// Vers+úo: React 18.3.1
 // AI_GENERATED_CODE_START
 import React, { useState } from 'react';
 import { User, DailyData } from '../../types';
@@ -21,7 +21,7 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
-    // VariÃ¡veis subjetivas
+    // Vari+íveis subjetivas
     sleep_quality: 5,
     sleep_duration: '',
     sleep_regularity: 5,
@@ -32,10 +32,10 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     stress_level: 5,
     tqr: 5, // Total Quality Recovery (0-10)
     psr: 5, // Perceived Stress and Recovery (0-10)
-
-    // VariÃ¡veis objetivas (opcionais)
+    
+    // Vari+íveis objetivas (opcionais)
     resting_hr: '',
-
+    
     // Dados do treino anterior
     trained: false,
     training_duration: '',
@@ -44,10 +44,10 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     training_type: '',
     training_notes: '',
     // Novo campo
-    pse: 5 // PercepÃ§Ã£o Subjetiva de EsforÃ§o (0-10)
+    pse: 5 // Percep+º+úo Subjetiva de Esfor+ºo (0-10)
   });
 
-  // Fallback local quando Supabase nÃ£o tem tabelas configuradas
+  // Fallback local quando Supabase n+úo tem tabelas configuradas
   const saveLocalDailyData = (entry: Partial<DailyData>) => {
     try {
       const key = `daily_data_local_${user.id}`;
@@ -74,17 +74,17 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
 
   const steps = [
     {
-      title: 'Como vocÃª dormiu?',
+      title: 'Como voc+¬ dormiu?',
       icon: <Moon className="h-6 w-6 text-indigo-600" />,
       fields: ['sleep_quality', 'sleep_duration', 'sleep_regularity']
     },
     {
-      title: 'Como estÃ¡ se sentindo?',
+      title: 'Como est+í se sentindo?',
       icon: <Brain className="h-6 w-6 text-purple-600" />,
       fields: ['fatigue_level', 'exhaustion', 'mood', 'stress_level']
     },
     {
-      title: 'Estado fÃ­sico atual',
+      title: 'Estado f+¡sico atual',
       icon: <Zap className="h-6 w-6 text-yellow-600" />,
       fields: ['muscle_soreness', 'tqr']
     },
@@ -128,444 +128,471 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
 
   const handleSubmit = async () => {
     setLoading(true);
-
+    
     try {
       const today = new Date().toISOString().split('T')[0];
-      const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
-      const isConnectivity = /Supabase nÃ£o configurado|Erro de conexÃ£o com Supabase|Failed to fetch|net::ERR/i.test(msg);
-      if (isSchemaMissing || isConnectivity) {
-        const ok = saveLocalDailyData(dailyDataEntry);
-        if (!ok) {
-          throw new Error('Erro ao salvar dados diÃ¡rios localmente.');
-        }
-        if (import.meta.env.DEV) {
-          console.warn('Supabase indisponÃ­vel (schema/conectividade). Entrada salva localmente.');
-        }
-      } else {
-        throw new Error('Erro ao salvar dados diÃ¡rios: ' + msg);
-      }
-    }
-
+      
+      let tss = 0;
       if (formData.training_duration && formData.training_rpe) {
-      const durationMinutes = parseInt(formData.training_duration);
-      const estimatedAvgHR = formData.resting_hr
-        ? parseInt(formData.resting_hr) + (formData.training_intensity || 0) * 15
-        : 60 + (formData.training_intensity || 0) * 15;
-      const trimp = durationMinutes ? calculateTRIMP(durationMinutes, estimatedAvgHR) : 0;
+        tss = calculateTSS(parseInt(formData.training_duration), formData.training_rpe);
+      }
 
-      const trainingSession = {
+      const dailyDataEntry: Partial<DailyData> = {
         user_id: user.id,
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        duration: durationMinutes,
+        date: today,
+        sleep_quality: formData.sleep_quality,
+        sleep_duration: formData.sleep_duration ? parseFloat(formData.sleep_duration) : 8,
+        sleep_regularity: formData.sleep_regularity,
+        fatigue_level: formData.fatigue_level,
+        exhaustion: formData.exhaustion,
+        mood: formData.mood,
+        muscle_soreness: formData.muscle_soreness,
+        stress_level: formData.stress_level,
+        tqr: formData.tqr,
+        psr: formData.psr,
+        resting_hr: formData.resting_hr ? parseInt(formData.resting_hr) : null,
         rpe: formData.training_rpe,
-        training_type: formData.training_type || 'Geral',
-        tss: tss,
-        trimp: trimp,
-        pse: formData.pse,
-        notes: formData.training_notes,
         created_at: new Date().toISOString()
       };
 
-      const { error: trainingError } = await dbHelpers.insertTrainingSession(trainingSession);
-      if (trainingError) {
-        const msg = trainingError.message || '';
-        const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
-        const isConnectivity = /Supabase nÃ£o configurado|Erro de conexÃ£o com Supabase|Failed to fetch|net::ERR/i.test(msg);
+      const { error: dailyError } = await dbHelpers.insertDailyData(dailyDataEntry);
+      if (dailyError) {
+        const msg = dailyError.message || '';
+        const isSchemaMissing = (dailyError as any)?.code === '404' || /Could not find the table 'public\.daily_data'/i.test(msg);
+        const isConnectivity = /Supabase n+úo configurado|Erro de conex+úo com Supabase|Failed to fetch|net::ERR/i.test(msg);
         if (isSchemaMissing || isConnectivity) {
-          const ok = saveLocalTrainingSession(trainingSession);
+          const ok = saveLocalDailyData(dailyDataEntry);
           if (!ok) {
-            alert('Falha ao salvar sessÃ£o de treino localmente.');
+            throw new Error('Erro ao salvar dados di+írios localmente.');
           }
           if (import.meta.env.DEV) {
-            console.warn('Supabase indisponÃ­vel (schema/conectividade). SessÃ£o salva localmente.');
+            console.warn('Supabase indispon+¡vel (schema/conectividade). Entrada salva localmente.');
           }
-        } else if (import.meta.env.DEV) {
-          console.warn('Erro ao salvar sessÃ£o de treino:', msg);
+        } else {
+          throw new Error('Erro ao salvar dados di+írios: ' + msg);
         }
       }
+
+      if (formData.training_duration && formData.training_rpe) {
+        const durationMinutes = parseInt(formData.training_duration);
+        const estimatedAvgHR = formData.resting_hr
+          ? parseInt(formData.resting_hr) + (formData.training_intensity || 0) * 15
+          : 60 + (formData.training_intensity || 0) * 15;
+        const trimp = durationMinutes ? calculateTRIMP(durationMinutes, estimatedAvgHR) : 0;
+
+        const trainingSession = {
+          user_id: user.id,
+          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          duration: durationMinutes,
+          rpe: formData.training_rpe,
+          training_type: formData.training_type || 'Geral',
+          tss: tss,
+          trimp: trimp,
+          pse: formData.pse,
+          notes: formData.training_notes,
+          created_at: new Date().toISOString()
+        };
+
+        const { error: trainingError } = await dbHelpers.insertTrainingSession(trainingSession);
+        if (trainingError) {
+          const msg = trainingError.message || '';
+          const isSchemaMissing = (trainingError as any)?.code === '404' || /Could not find the table 'public\.training_sessions'/i.test(msg);
+          const isConnectivity = /Supabase n+úo configurado|Erro de conex+úo com Supabase|Failed to fetch|net::ERR/i.test(msg);
+          if (isSchemaMissing || isConnectivity) {
+            const ok = saveLocalTrainingSession(trainingSession);
+            if (!ok) {
+              alert('Falha ao salvar sess+úo de treino localmente.');
+            }
+            if (import.meta.env.DEV) {
+              console.warn('Supabase indispon+¡vel (schema/conectividade). Sess+úo salva localmente.');
+            }
+          } else if (import.meta.env.DEV) {
+            console.warn('Erro ao salvar sess+úo de treino:', msg);
+          }
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        console.info('Avalia+º+úo salva com sucesso (Supabase ou local).');
+      }
+      onComplete();
+      
+    } catch (error) {
+      alert('Erro ao salvar avalia+º+úo: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (import.meta.env.DEV) {
-      console.info('AvaliaÃ§Ã£o salva com sucesso (Supabase ou local).');
-    }
-    onComplete();
+  const currentStepData = steps[currentStep];
+  const progress = ((currentStep + 1) / steps.length) * 100;
 
-  } catch (error) {
-    alert('Erro ao salvar avaliaÃ§Ã£o: ' + (error as Error).message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const currentStepData = steps[currentStep];
-const progress = ((currentStep + 1) / steps.length) * 100;
-
-return (
-  <div className="max-w-2xl mx-auto">
-    <Card className="shadow-xl border-0">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <Calendar className="h-6 w-6 text-blue-400" />
-          <h2 className="text-2xl font-bold text-white">AvaliaÃ§Ã£o DiÃ¡ria</h2>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-600 rounded-full h-2 mb-4">
-          <div
-            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        <div className="flex items-center justify-center space-x-2 text-gray-300">
-          {currentStepData.icon}
-          <span className="font-medium">{currentStepData.title}</span>
-        </div>
-
-        <p className="text-sm text-gray-500">
-          Passo {currentStep + 1} de {steps.length}
-        </p>
-      </CardHeader>
-
-      <CardContent className="p-8">
-        {/* Step 0: Sleep Quality */}
-        {currentStep === 0 && (
-          <div className="space-y-8">
-            <SliderField
-              label="Qualidade do sono (1-10)"
-              value={formData.sleep_quality}
-              onChange={(value) => handleSliderChange('sleep_quality', value)}
-              leftLabel="PÃ©ssima"
-              rightLabel="Excelente"
-              color="indigo"
-              valueDescriptions={{
-                1: "NÃ£o consegui dormir, insÃ´nia total",
-                2: "Sono muito fragmentado, acordei vÃ¡rias vezes",
-                3: "Sono ruim, demorei para adormecer",
-                4: "Sono irregular, acordei algumas vezes",
-                5: "Sono mÃ©dio, nem bom nem ruim",
-                6: "Sono razoÃ¡vel, pequenos despertares",
-                7: "Sono bom, acordei descansado",
-                8: "Sono muito bom, profundo e reparador",
-                9: "Sono excelente, acordei revigorado",
-                10: "Sono perfeito, melhor noite possÃ­vel"
-              }}
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Card className="shadow-xl border-0">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <Calendar className="h-6 w-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">Avalia+º+úo Di+íria</h2>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-600 rounded-full h-2 mb-4">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
             />
+          </div>
+          
+          <div className="flex items-center justify-center space-x-2 text-gray-300">
+            {currentStepData.icon}
+            <span className="font-medium">{currentStepData.title}</span>
+          </div>
+          
+          <p className="text-sm text-gray-500">
+            Passo {currentStep + 1} de {steps.length}
+          </p>
+        </CardHeader>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                DuraÃ§Ã£o do sono (horas)
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                placeholder="Ex: 8.5"
-                value={formData.sleep_duration}
-                onChange={(e) => handleInputChange('sleep_duration', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        <CardContent className="p-8">
+          {/* Step 0: Sleep Quality */}
+          {currentStep === 0 && (
+            <div className="space-y-8">
+              <SliderField
+                label="Qualidade do sono (1-10)"
+                value={formData.sleep_quality}
+                onChange={(value) => handleSliderChange('sleep_quality', value)}
+                leftLabel="P+®ssima"
+                rightLabel="Excelente"
+                color="indigo"
+                valueDescriptions={{
+                  1: "N+úo consegui dormir, ins+¦nia total",
+                  2: "Sono muito fragmentado, acordei v+írias vezes",
+                  3: "Sono ruim, demorei para adormecer",
+                  4: "Sono irregular, acordei algumas vezes",
+                  5: "Sono m+®dio, nem bom nem ruim",
+                  6: "Sono razo+ível, pequenos despertares",
+                  7: "Sono bom, acordei descansado",
+                  8: "Sono muito bom, profundo e reparador",
+                  9: "Sono excelente, acordei revigorado",
+                  10: "Sono perfeito, melhor noite poss+¡vel"
+                }}
               />
-            </div>
-
-            <SliderField
-              label="Regularidade do sono (1-10)"
-              value={formData.sleep_regularity}
-              onChange={(value) => handleSliderChange('sleep_regularity', value)}
-              leftLabel="Muito irregular"
-              rightLabel="Muito regular"
-              color="indigo"
-              valueDescriptions={{
-                1: "HorÃ¡rios completamente desregulados",
-                2: "Muito irregular, sem padrÃ£o",
-                3: "Bastante irregular, varia muito",
-                4: "Irregular, algumas variaÃ§Ãµes",
-                5: "Moderadamente regular",
-                6: "Razoavelmente regular",
-                7: "Bem regular, pequenas variaÃ§Ãµes",
-                8: "Muito regular, horÃ¡rios consistentes",
-                9: "Extremamente regular, rotina fixa",
-                10: "Perfeitamente regular, mesmo horÃ¡rio sempre"
-              }}
-            />
-          </div>
-        )}
-
-        {/* Step 1: Mood & Energy */}
-        {currentStep === 1 && (
-          <div className="space-y-8">
-            <SliderField
-              label="NÃ­vel de fadiga (1-10)"
-              value={formData.fatigue_level}
-              onChange={(value) => handleSliderChange('fatigue_level', value)}
-              leftLabel="Muito cansado"
-              rightLabel="Muito disposto"
-              color="purple"
-              valueDescriptions={{
-                1: "Extremamente cansado, sem energia",
-                2: "Muito cansado, dificuldade para atividades",
-                3: "Bastante cansado, energia baixa",
-                4: "Cansado, mas consigo fazer atividades",
-                5: "Energia moderada, nem cansado nem disposto",
-                6: "Razoavelmente disposto",
-                7: "Bem disposto, boa energia",
-                8: "Muito disposto, energia alta",
-                9: "Extremamente disposto, muita energia",
-                10: "Energia mÃ¡xima, completamente revigorado"
-              }}
-            />
-
-            <SliderField
-              label="NÃ­vel de exaustÃ£o (1-10)"
-              value={formData.exhaustion}
-              onChange={(value) => handleSliderChange('exhaustion', value)}
-              leftLabel="Sem exaustÃ£o"
-              rightLabel="Completamente exausto"
-              color="red"
-              valueDescriptions={{
-                1: "Totalmente recuperado, sem exaustÃ£o",
-                2: "Muito pouca exaustÃ£o",
-                3: "Leve sensaÃ§Ã£o de exaustÃ£o",
-                4: "Alguma exaustÃ£o, mas controlÃ¡vel",
-                5: "ExaustÃ£o moderada",
-                6: "Bastante exausto",
-                7: "Muito exausto, preciso descansar",
-                8: "Extremamente exausto",
-                9: "Quase no limite da exaustÃ£o",
-                10: "Completamente exausto, nÃ£o consigo mais"
-              }}
-            />
-
-            <SliderField
-              label="Humor geral (1-10)"
-              value={formData.mood}
-              onChange={(value) => handleSliderChange('mood', value)}
-              leftLabel="PÃ©ssimo"
-              rightLabel="Excelente"
-              color="blue"
-              valueDescriptions={{
-                1: "Muito deprimido, humor pÃ©ssimo",
-                2: "Bastante triste, humor ruim",
-                3: "Humor baixo, desanimado",
-                4: "Humor um pouco baixo",
-                5: "Humor neutro, nem bom nem ruim",
-                6: "Humor razoÃ¡vel, ligeiramente positivo",
-                7: "Bom humor, me sinto bem",
-                8: "Muito bom humor, otimista",
-                9: "Humor excelente, muito feliz",
-                10: "Humor perfeito, eufÃ³rico e motivado"
-              }}
-            />
-
-            <SliderField
-              label="NÃ­vel de estresse (1-10)"
-              value={formData.stress_level}
-              onChange={(value) => handleSliderChange('stress_level', value)}
-              leftLabel="Muito estressado"
-              rightLabel="Muito relaxado"
-              color="green"
-              valueDescriptions={{
-                1: "Extremamente estressado, ansioso",
-                2: "Muito estressado, difÃ­cil relaxar",
-                3: "Bastante estressado, tenso",
-                4: "Estressado, mas controlÃ¡vel",
-                5: "Estresse moderado, nem relaxado nem tenso",
-                6: "Razoavelmente relaxado",
-                7: "Bem relaxado, calmo",
-                8: "Muito relaxado, tranquilo",
-                9: "Extremamente relaxado, zen",
-                10: "Completamente relaxado, paz total"
-              }}
-            />
-          </div>
-        )}
-
-        {/* Step 2: Physical State */}
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <SliderField
-              label="Dor muscular (1-10)"
-              value={formData.muscle_soreness}
-              onChange={(value) => handleSliderChange('muscle_soreness', value)}
-              leftLabel="Muita dor"
-              rightLabel="Sem dor"
-              color="yellow"
-              valueDescriptions={{
-                1: "Dor intensa, dificulta movimentos",
-                2: "Dor forte, desconforto significativo",
-                3: "Dor moderada a forte",
-                4: "Dor moderada, mas suportÃ¡vel",
-                5: "Dor leve a moderada",
-                6: "Dor leve, pouco desconforto",
-                7: "Dor muito leve, quase imperceptÃ­vel",
-                8: "Desconforto mÃ­nimo",
-                9: "Praticamente sem dor",
-                10: "Totalmente sem dor, mÃºsculos relaxados"
-              }}
-            />
-
-            <SliderField
-              label="TQR - Qualidade Total de RecuperaÃ§Ã£o (0-10)"
-              value={formData.tqr}
-              onChange={(value) => handleSliderChange('tqr', value)}
-              leftLabel="NÃ£o recuperado"
-              rightLabel="Totalmente recuperado"
-              color="blue"
-              valueDescriptions={{
-                0: "Nada recuperado, exaustÃ£o total",
-                1: "Muito pouco recuperado, extremamente cansado",
-                2: "Pouco recuperado, muito cansado",
-                3: "RecuperaÃ§Ã£o insuficiente, cansado",
-                4: "RecuperaÃ§Ã£o parcial, ainda cansado",
-                5: "RecuperaÃ§Ã£o moderada, energia mÃ©dia",
-                6: "Razoavelmente recuperado, energia adequada",
-                7: "Bem recuperado, boa energia",
-                8: "Muito bem recuperado, energia alta",
-                9: "Quase totalmente recuperado, energia excelente",
-                10: "Totalmente recuperado, energia mÃ¡xima"
-              }}
-            />
-
-            {/* PSR */}
-            <SliderField
-              label="PSR - Estresse/RecuperaÃ§Ã£o percebida (0-10)"
-              value={formData.psr}
-              onChange={(value) => handleSliderChange('psr', value)}
-              leftLabel="Muito estressado"
-              rightLabel="Totalmente recuperado"
-              color="blue"
-            />
-          </div>
-        )}
-
-        {/* Step 3: Objective Data */}
-        {currentStep === 3 && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                FrequÃªncia cardÃ­aca de repouso (bpm)
-              </label>
-              <input
-                type="number"
-                placeholder="Ex: 60"
-                value={formData.resting_hr}
-                onChange={(e) => handleInputChange('resting_hr', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            <div className="bg-blue-900/20 border border-blue-600 rounded-lg p-4">
-              <p className="text-sm text-blue-300">
-                ðŸ’¡ <strong>Dica:</strong> Este dado pode ser obtido de dispositivos como relÃ³gios inteligentes ou monitores cardÃ­acos. Se nÃ£o tiver, deixe em branco.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Training */}
-        {currentStep === 4 && (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <input
-                type="checkbox"
-                id="trained"
-                checked={formData.trained}
-                onChange={(e) => handleInputChange('trained', e.target.checked)}
-                className="w-5 h-5 text-orange-600 border-gray-500 bg-gray-700 rounded focus:ring-orange-500"
-              />
-              <label htmlFor="trained" className="text-lg font-medium text-white">
-                Treinei hoje
-              </label>
-            </div>
-
-            {formData.trained && (
-              <div className="space-y-6 pl-8 border-l-4 border-orange-600">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    DuraÃ§Ã£o do treino (minutos)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Ex: 60"
-                    value={formData.training_duration}
-                    onChange={(e) => handleInputChange('training_duration', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <SliderField
-                  label="Intensidade do treino (1-10)"
-                  value={formData.training_intensity}
-                  onChange={(value) => handleSliderChange('training_intensity', value)}
-                  leftLabel="Muito leve"
-                  rightLabel="MÃ¡xima"
-                  color="orange"
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Dura+º+úo do sono (horas)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  placeholder="Ex: 8.5"
+                  value={formData.sleep_duration}
+                  onChange={(e) => handleInputChange('sleep_duration', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
-
-                <SliderField
-                  label="RPE - PercepÃ§Ã£o de esforÃ§o (1-10)"
-                  value={formData.training_rpe}
-                  onChange={(value) => handleSliderChange('training_rpe', value)}
-                  leftLabel="Muito fÃ¡cil"
-                  rightLabel="MÃ¡ximo esforÃ§o"
-                  color="orange"
-                  min={1}
-                  max={10}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Tipo de treino
-                  </label>
-                  <select
-                    value={formData.training_type}
-                    onChange={(e) => handleInputChange('training_type', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  >
-                    <option value="">Selecione o tipo</option>
-                    <option value="cardio">Cardio</option>
-                    <option value="strength">ForÃ§a</option>
-                    <option value="flexibility">Flexibilidade</option>
-                    <option value="sports">Esportes</option>
-                    <option value="mixed">Misto</option>
-                  </select>
-                </div>
               </div>
-            )}
-          </div>
-        )}
+              
+              <SliderField
+                label="Regularidade do sono (1-10)"
+                value={formData.sleep_regularity}
+                onChange={(value) => handleSliderChange('sleep_regularity', value)}
+                leftLabel="Muito irregular"
+                rightLabel="Muito regular"
+                color="indigo"
+                valueDescriptions={{
+                  1: "Hor+írios completamente desregulados",
+                  2: "Muito irregular, sem padr+úo",
+                  3: "Bastante irregular, varia muito",
+                  4: "Irregular, algumas varia+º+Áes",
+                  5: "Moderadamente regular",
+                  6: "Razoavelmente regular",
+                  7: "Bem regular, pequenas varia+º+Áes",
+                  8: "Muito regular, hor+írios consistentes",
+                  9: "Extremamente regular, rotina fixa",
+                  10: "Perfeitamente regular, mesmo hor+írio sempre"
+                }}
+              />
+            </div>
+          )}
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 0}
-            className="px-6"
-          >
-            Anterior
-          </Button>
+          {/* Step 1: Mood & Energy */}
+          {currentStep === 1 && (
+            <div className="space-y-8">
+              <SliderField
+                label="N+¡vel de fadiga (1-10)"
+                value={formData.fatigue_level}
+                onChange={(value) => handleSliderChange('fatigue_level', value)}
+                leftLabel="Muito cansado"
+                rightLabel="Muito disposto"
+                color="purple"
+                valueDescriptions={{
+                  1: "Extremamente cansado, sem energia",
+                  2: "Muito cansado, dificuldade para atividades",
+                  3: "Bastante cansado, energia baixa",
+                  4: "Cansado, mas consigo fazer atividades",
+                  5: "Energia moderada, nem cansado nem disposto",
+                  6: "Razoavelmente disposto",
+                  7: "Bem disposto, boa energia",
+                  8: "Muito disposto, energia alta",
+                  9: "Extremamente disposto, muita energia",
+                  10: "Energia m+íxima, completamente revigorado"
+                }}
+              />
+              
+              <SliderField
+                label="N+¡vel de exaust+úo (1-10)"
+                value={formData.exhaustion}
+                onChange={(value) => handleSliderChange('exhaustion', value)}
+                leftLabel="Sem exaust+úo"
+                rightLabel="Completamente exausto"
+                color="red"
+                valueDescriptions={{
+                  1: "Totalmente recuperado, sem exaust+úo",
+                  2: "Muito pouca exaust+úo",
+                  3: "Leve sensa+º+úo de exaust+úo",
+                  4: "Alguma exaust+úo, mas control+ível",
+                  5: "Exaust+úo moderada",
+                  6: "Bastante exausto",
+                  7: "Muito exausto, preciso descansar",
+                  8: "Extremamente exausto",
+                  9: "Quase no limite da exaust+úo",
+                  10: "Completamente exausto, n+úo consigo mais"
+                }}
+              />
+              
+              <SliderField
+                label="Humor geral (1-10)"
+                value={formData.mood}
+                onChange={(value) => handleSliderChange('mood', value)}
+                leftLabel="P+®ssimo"
+                rightLabel="Excelente"
+                color="blue"
+                valueDescriptions={{
+                  1: "Muito deprimido, humor p+®ssimo",
+                  2: "Bastante triste, humor ruim",
+                  3: "Humor baixo, desanimado",
+                  4: "Humor um pouco baixo",
+                  5: "Humor neutro, nem bom nem ruim",
+                  6: "Humor razo+ível, ligeiramente positivo",
+                  7: "Bom humor, me sinto bem",
+                  8: "Muito bom humor, otimista",
+                  9: "Humor excelente, muito feliz",
+                  10: "Humor perfeito, euf+¦rico e motivado"
+                }}
+              />
+              
+              <SliderField
+                label="N+¡vel de estresse (1-10)"
+                value={formData.stress_level}
+                onChange={(value) => handleSliderChange('stress_level', value)}
+                leftLabel="Muito estressado"
+                rightLabel="Muito relaxado"
+                color="green"
+                valueDescriptions={{
+                  1: "Extremamente estressado, ansioso",
+                  2: "Muito estressado, dif+¡cil relaxar",
+                  3: "Bastante estressado, tenso",
+                  4: "Estressado, mas control+ível",
+                  5: "Estresse moderado, nem relaxado nem tenso",
+                  6: "Razoavelmente relaxado",
+                  7: "Bem relaxado, calmo",
+                  8: "Muito relaxado, tranquilo",
+                  9: "Extremamente relaxado, zen",
+                  10: "Completamente relaxado, paz total"
+                }}
+              />
+            </div>
+          )}
 
-          {currentStep === steps.length - 1 ? (
+          {/* Step 2: Physical State */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <SliderField
+                label="Dor muscular (1-10)"
+                value={formData.muscle_soreness}
+                onChange={(value) => handleSliderChange('muscle_soreness', value)}
+                leftLabel="Muita dor"
+                rightLabel="Sem dor"
+                color="yellow"
+                valueDescriptions={{
+                  1: "Dor intensa, dificulta movimentos",
+                  2: "Dor forte, desconforto significativo",
+                  3: "Dor moderada a forte",
+                  4: "Dor moderada, mas suport+ível",
+                  5: "Dor leve a moderada",
+                  6: "Dor leve, pouco desconforto",
+                  7: "Dor muito leve, quase impercept+¡vel",
+                  8: "Desconforto m+¡nimo",
+                  9: "Praticamente sem dor",
+                  10: "Totalmente sem dor, m+¦sculos relaxados"
+                }}
+              />
+              
+              <SliderField
+                label="TQR - Qualidade Total de Recupera+º+úo (0-10)"
+                value={formData.tqr}
+                onChange={(value) => handleSliderChange('tqr', value)}
+                leftLabel="N+úo recuperado"
+                rightLabel="Totalmente recuperado"
+                color="blue"
+                valueDescriptions={{
+                  0: "Nada recuperado, exaust+úo total",
+                  1: "Muito pouco recuperado, extremamente cansado",
+                  2: "Pouco recuperado, muito cansado",
+                  3: "Recupera+º+úo insuficiente, cansado",
+                  4: "Recupera+º+úo parcial, ainda cansado",
+                  5: "Recupera+º+úo moderada, energia m+®dia",
+                  6: "Razoavelmente recuperado, energia adequada",
+                  7: "Bem recuperado, boa energia",
+                  8: "Muito bem recuperado, energia alta",
+                  9: "Quase totalmente recuperado, energia excelente",
+                  10: "Totalmente recuperado, energia m+íxima"
+                }}
+              />
+              
+              {/* PSR */}
+              <SliderField
+                label="PSR - Estresse/Recupera+º+úo percebida (0-10)"
+                value={formData.psr}
+                onChange={(value) => handleSliderChange('psr', value)}
+                leftLabel="Muito estressado"
+                rightLabel="Totalmente recuperado"
+                color="blue"
+              />
+            </div>
+          )}
+
+          {/* Step 3: Objective Data */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Frequ+¬ncia card+¡aca de repouso (bpm)
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ex: 60"
+                  value={formData.resting_hr}
+                  onChange={(e) => handleInputChange('resting_hr', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                />
+              </div>
+              
+              <div className="bg-blue-900/20 border border-blue-600 rounded-lg p-4">
+                <p className="text-sm text-blue-300">
+                  ­ƒÆí <strong>Dica:</strong> Este dado pode ser obtido de dispositivos como rel+¦gios inteligentes ou monitores card+¡acos. Se n+úo tiver, deixe em branco.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Training */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <input
+                  type="checkbox"
+                  id="trained"
+                  checked={formData.trained}
+                  onChange={(e) => handleInputChange('trained', e.target.checked)}
+                  className="w-5 h-5 text-orange-600 border-gray-500 bg-gray-700 rounded focus:ring-orange-500"
+                />
+                <label htmlFor="trained" className="text-lg font-medium text-white">
+                  Treinei hoje
+                </label>
+              </div>
+              
+              {formData.trained && (
+                <div className="space-y-6 pl-8 border-l-4 border-orange-600">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Dura+º+úo do treino (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 60"
+                      value={formData.training_duration}
+                      onChange={(e) => handleInputChange('training_duration', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  
+                  <SliderField
+                    label="Intensidade do treino (1-10)"
+                    value={formData.training_intensity}
+                    onChange={(value) => handleSliderChange('training_intensity', value)}
+                    leftLabel="Muito leve"
+                    rightLabel="M+íxima"
+                    color="orange"
+                  />
+                  
+                  <SliderField
+                    label="RPE - Percep+º+úo de esfor+ºo (1-10)"
+                    value={formData.training_rpe}
+                    onChange={(value) => handleSliderChange('training_rpe', value)}
+                    leftLabel="Muito f+ícil"
+                    rightLabel="M+íximo esfor+ºo"
+                    color="orange"
+                    min={1}
+                    max={10}
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Tipo de treino
+                    </label>
+                    <select
+                      value={formData.training_type}
+                      onChange={(e) => handleInputChange('training_type', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">Selecione o tipo</option>
+                      <option value="cardio">Cardio</option>
+                      <option value="strength">For+ºa</option>
+                      <option value="flexibility">Flexibilidade</option>
+                      <option value="sports">Esportes</option>
+                      <option value="mixed">Misto</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
             <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="px-6 flex items-center space-x-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>{loading ? 'Salvando...' : 'Finalizar'}</span>
-            </Button>
-          ) : (
-            <Button
-              onClick={handleNext}
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
               className="px-6"
             >
-              PrÃ³ximo
+              Anterior
             </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+
+            {currentStep === steps.length - 1 ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-6 flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>{loading ? 'Salvando...' : 'Finalizar'}</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={handleNext}
+                className="px-6"
+              >
+                Pr+¦ximo
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 // Componente do slider customizado
@@ -592,7 +619,7 @@ const SliderField: React.FC<{
 
   const percentage = ((value - min) / (max - min)) * 100;
 
-  // FunÃ§Ã£o para obter a descriÃ§Ã£o do valor atual
+  // Fun+º+úo para obter a descri+º+úo do valor atual
   const getCurrentDescription = () => {
     if (valueDescriptions && valueDescriptions[value]) {
       return valueDescriptions[value];
@@ -613,7 +640,7 @@ const SliderField: React.FC<{
           )}
         </div>
       </div>
-
+      
       <div className="px-4">
         <input
           type="range"
@@ -628,13 +655,13 @@ const SliderField: React.FC<{
           }}
         />
       </div>
-
+      
       <div className="flex justify-between text-sm text-gray-300">
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>
-
-      {/* Escala de referÃªncia visual */}
+      
+      {/* Escala de refer+¬ncia visual */}
       <div className="flex justify-between text-xs text-gray-400 px-2">
         {Array.from({ length: max - min + 1 }, (_, i) => min + i).map((num) => (
           <span key={num} className={`${num === value ? 'text-white font-bold' : ''}`}>
