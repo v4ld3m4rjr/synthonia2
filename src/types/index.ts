@@ -1,79 +1,263 @@
-// [AI Generated] Data: 19/01/2025
-// Descrição: Definição de tipos TypeScript para toda a aplicação
-// Gerado por: Cursor AI
-// Versão: TypeScript 5.5.3
-// AI_GENERATED_CODE_START
+// =====================================================
+// Synthonia - TypeScript Types
+// Versão: 2.0
+// Alinhado 100% com schema.sql
+// =====================================================
+
+// =====================================================
+// USER TYPES
+// =====================================================
+
+export type UserRole = 'athlete' | 'coach' | 'physiotherapist';
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  birth_date?: string;
-  role: 'athlete' | 'coach' | 'physiotherapist';
-  coach_id?: string;
+  role: UserRole;
+  coach_id?: string | null;
+  avatar_url?: string | null;
+  birth_date?: string | null;
   created_at: string;
-  avatar_url?: string;
+  updated_at: string;
 }
+
+export interface UserMetadata {
+  name: string;
+  role: UserRole;
+  coach_id?: string;
+  birth_date?: string;
+}
+
+// =====================================================
+// DAILY DATA TYPES
+// =====================================================
 
 export interface DailyData {
   id: string;
   user_id: string;
   date: string;
-  sleep_quality: number; // 1-10
-  sleep_duration: number; // horas
-  sleep_regularity: number; // 1-10 (consistência do horário de sono)
-  fatigue_level: number; // 1-10
-  exhaustion: number; // 1-10 (nível de exaustão física/mental)
-  mood: number; // 1-10
-  muscle_soreness: number; // 1-10
-  stress_level: number; // 1-10
-  tqr: number; // 0-10 (Total Quality Recovery)
-  psr: number; // 0-10 (Perceived Stress and Recovery)
-  resting_hr?: number;
-  readiness_score: number; // 0-100
-  // Dados para cálculos de treinamento
-  rpe?: number; // Rating of Perceived Exertion (1-10)
-  training_duration?: number; // minutos
-  training_intensity?: number; // 1-10
+
+  // Sono
+  sleep_quality?: number | null;
+  sleep_duration?: number | null;
+  sleep_regularity?: number | null;
+
+  // Bem-estar
+  fatigue_level?: number | null;
+  exhaustion?: number | null;
+  mood?: number | null;
+  muscle_soreness?: number | null;
+  stress_level?: number | null;
+
+  // Recuperação
+  tqr?: number | null;
+  psr?: number | null;
+  resting_hr?: number | null;
+  hrv?: number | null;
+
+  // Calculados
+  readiness_score?: number | null;
+
+  notes?: string | null;
   created_at: string;
+  updated_at: string;
 }
+
+export interface DailyDataInput {
+  user_id: string;
+  date: string;
+
+  // Sono
+  sleep_quality?: number;
+  sleep_duration?: number;
+  sleep_regularity?: number;
+
+  // Bem-estar
+  fatigue_level?: number;
+  exhaustion?: number;
+  mood?: number;
+  muscle_soreness?: number;
+  stress_level?: number;
+
+  // Recuperação
+  tqr?: number;
+  psr?: number;
+  resting_hr?: number;
+  hrv?: number;
+
+  notes?: string;
+}
+
+// =====================================================
+// TRAINING SESSION TYPES
+// =====================================================
+
+export type TrainingType =
+  | 'cardio'
+  | 'strength'
+  | 'flexibility'
+  | 'sports'
+  | 'mixed'
+  | 'recovery'
+  | 'other';
 
 export interface TrainingSession {
   id: string;
   user_id: string;
   date: string;
-  duration: number; // minutes
-  rpe: number; // 1-10
+
+  // Dados básicos (obrigatórios)
+  duration: number;
+  rpe: number;
+  training_type: string;
+
+  // Métricas opcionais
+  volume?: number | null;
+  intensity?: number | null;
+
+  // Calculados
+  tss?: number | null;
+  pse?: number | null;
+  trimp?: number | null;
+
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrainingSessionInput {
+  user_id: string;
+  date: string;
+  duration: number;
+  rpe: number;
   training_type: string;
   volume?: number;
   intensity?: number;
-  tss: number; // Training Stress Score
-  trimp?: number; // Training Impulse
-  pse?: number; // Percepção Subjetiva de Esforço
   notes?: string;
-  created_at: string;
 }
+
+// =====================================================
+// ANALYTICS & METRICS TYPES
+// =====================================================
 
 export interface TrainingMetrics {
   date: string;
-  tss: number; // Training Stress Score
+  tss: number;
   atl: number; // Acute Training Load (7 days)
   ctl: number; // Chronic Training Load (28 days)
   tsb: number; // Training Stress Balance
-  daily_monotony: number; // Monotonia diária
-  monotony: number; // Monotonia semanal
-  trimp: number; // Training Impulse
-  pse: number; // Perceived Strain and Exertion
-  psr: number; // Perceived Stress and Recovery
-  tqr: number; // Total Quality Recovery
+  monotony: number;
+  trimp: number;
+  pse: number;
 }
 
+export interface WellnessMetrics {
+  date: string;
+  readiness_score: number;
+  sleep_quality: number;
+  fatigue_level: number;
+  mood: number;
+  stress_level: number;
+}
+
+export interface AthleteSummary {
+  id: string;
+  name: string;
+  email: string;
+  total_daily_entries: number;
+  total_training_sessions: number;
+  avg_readiness: number;
+  total_tss_7days: number;
+}
+
+// =====================================================
+// FORM & UI TYPES
+// =====================================================
+
+export interface FormErrors {
+  [key: string]: string;
+}
+
+export interface ValidationRule {
+  required?: boolean;
+  min?: number;
+  max?: number;
+  pattern?: RegExp;
+  custom?: (value: any) => boolean;
+  message: string;
+}
+
+export interface ValidationSchema {
+  [key: string]: ValidationRule[];
+}
+
+// =====================================================
+// CHART & VISUALIZATION TYPES
+// =====================================================
+
+export interface ChartDataPoint {
+  date: string;
+  value: number;
+  label?: string;
+}
+
+export interface MetricConfig {
+  key: string;
+  label: string;
+  color: string;
+  unit: string;
+  min?: number;
+  max?: number;
+}
+
+// =====================================================
+// FILTER & QUERY TYPES
+// =====================================================
+
+export interface DateRange {
+  start: string;
+  end: string;
+}
+
+export interface DataFilter {
+  userId?: string;
+  dateRange?: DateRange;
+  trainingType?: string;
+  metrics?: string[];
+}
+
+// =====================================================
+// API RESPONSE TYPES
+// =====================================================
+
+export interface ApiResponse<T> {
+  data: T | null;
+  error: Error | null;
+}
+
+export interface Error {
+  message: string;
+  code?: string;
+  details?: any;
+}
+
+// =====================================================
+// RECOMMENDATION TYPES
+// =====================================================
+
 export interface Recommendation {
-  type: 'training' | 'recovery' | 'rest';
+  type: 'training' | 'recovery' | 'rest' | 'warning';
   title: string;
   description: string;
-  icon: string;
-  color: string;
+  priority: 'low' | 'medium' | 'high';
+  icon?: string;
+  color?: string;
 }
+
+// =====================================================
+// GAMIFICATION TYPES
+// =====================================================
 
 export interface GamificationStats {
   user_id: string;
@@ -83,51 +267,11 @@ export interface GamificationStats {
   achievements: string[];
 }
 
-// Interfaces para cálculos científicos
-export interface MetricCalculationInput {
-  dailyData: DailyData[];
-  trainingSessions: TrainingSession[];
-  period: number; // dias
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: string;
 }
-
-export interface SleepMetrics {
-  duration: number;
-  regularity: number;
-  quality: number;
-  efficiency: number;
-}
-
-export interface ExhaustionMetrics {
-  physical: number;
-  mental: number;
-  overall: number;
-  recovery_needed: number;
-}
-
-export interface AdvancedTrainingMetrics {
-  tss: number;
-  atl: number;
-  ctl: number;
-  tsb: number;
-  daily_monotony: number;
-  weekly_monotony: number;
-  trimp: number;
-  pse: number;
-  psr: number;
-  tqr: number;
-}
-
-// Interface para dados do gráfico
-export interface ChartDataPoint {
-  date: string;
-  value: number;
-  metric: string;
-}
-
-export interface AnalyticsFilter {
-  metrics: string[];
-  period: 7 | 14 | 21 | 28;
-  startDate?: string;
-  endDate?: string;
-}
-// AI_GENERATED_CODE_END
