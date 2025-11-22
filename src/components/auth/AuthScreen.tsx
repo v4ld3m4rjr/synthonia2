@@ -1,12 +1,26 @@
-// Synthonia - Modern Authentication Screen
-// Rebuilt with TypeScript, modern design, and robust validation
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+// =====================================================
+// Synthonia - Authentication Screen
+// Versão: 2.0 - Rebuilt with robust validation
+// =====================================================
+
+import React, { useState, useEffect, useRef } from 'react';
 import { authHelpers, supabase, ensureSupabaseConfigured } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Activity, Target, Users, Award, TrendingUp, Brain, Mail, Lock, User as UserIcon, Calendar, Shield } from 'lucide-react';
+import {
+  Activity, Target, Users, Award, TrendingUp, Brain,
+  Mail, Lock, User as UserIcon, Calendar, Shield
+} from 'lucide-react';
 import SynthoniaLogo from '../ui/SynthoniaLogo';
 import CustomDateInputLight from '../ui/CustomDateInputLight';
+import type { User, UserMetadata } from '../../types';
+import { validateForm, authSchema, validationRules, validateField as validateSingleField } from '../../utils/validation';
+import { parseSupabaseError, formatErrorMessage, logError } from '../../utils/errorHandling';
+import type { FormErrors } from '../../types';
+
+// =====================================================
+// TYPES
+// =====================================================
 
 interface Coach {
   id: string;
@@ -14,7 +28,7 @@ interface Coach {
   email: string;
 }
 
-interface FormData {
+interface AuthFormData {
   email: string;
   password: string;
   name: string;
@@ -23,13 +37,9 @@ interface FormData {
   coach_id: string;
 }
 
-interface FormErrors {
-  email?: string;
-  password?: string;
-  name?: string;
-  birth_date?: string;
-  coach_id?: string;
-}
+// =====================================================
+// FEATURE CARD COMPONENT
+// =====================================================
 
 const FeatureCard: React.FC<{
   icon: React.ReactNode;
@@ -37,16 +47,23 @@ const FeatureCard: React.FC<{
   description: string;
 }> = ({ icon, title, description }) => (
   <div className="group bg-gradient-to-br from-gray-800/70 to-gray-900/70 backdrop-blur-sm rounded-xl p-6 text-center space-y-3 hover:from-gray-700/80 hover:to-gray-800/80 transition-all duration-300 border border-gray-700/50 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1">
-    <div className="flex justify-center transform group-hover:scale-110 transition-transform duration-300">{icon}</div>
+    <div className="flex justify-center transform group-hover:scale-110 transition-transform duration-300">
+      {icon}
+    </div>
     <h3 className="font-semibold text-base text-white">{title}</h3>
     <p className="text-sm text-gray-300 leading-relaxed">{description}</p>
   </div>
 );
 
+// =====================================================
+// MAIN COMPONENT
+// =====================================================
+
 const AuthScreen: React.FC = () => {
+  // ===== State =====
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<AuthFormData>({
     email: '',
     password: '',
     name: '',
@@ -56,537 +73,535 @@ const AuthScreen: React.FC = () => {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [coaches, setCoaches] = useState<Coach[]>([]);
-  const [coachQuery, setCoachQuery] = useState('');
   const [coachLoading, setCoachLoading] = useState(false);
-  const [coachError, setCoachError] = useState<string | null>(null);
-  const coachSelectRef = useRef<HTMLSelectElement | null>(null);
   const [signupEmailSent, setSignupEmailSent] = useState(false);
   const [supabaseReady, setSupabaseReady] = useState(!!supabase);
-  const supabaseConfigured = supabaseReady;
-  const coachAvailable = coaches.length > 0 && !coachError;
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState('');
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState('');
-  const [showSupabaseConfig, setShowSupabaseConfig] = useState(false);
 
-  const redirectHint = (import.meta.env.VITE_AUTH_REDIRECT_URL)
-    ? import.meta.env.VITE_AUTH_REDIRECT_URL
-    : ((typeof window !== 'undefined' && window.location && window.location.origin)
-      ? `${window.location.origin}/`
-      : '');
+  // Refs
+  const coachSelectRef = useRef<HTMLSelectElement | null>(null);
 
-  const handleResend = async () => {
-    if (!formData.email) {
-      alert('Informe seu email para reenviar a confirmação.');
-      return;
-    }
-    const { error } = await authHelpers.resendSignupEmail(formData.email);
-    if (error) {
-      const msg = error.message || '';
-      if (msg.includes('Failed to fetch')) {
-        alert('❌ Falha de conexão com Supabase ao reenviar.\\n\\n💡 Dica: Verifique a URL e anon key em "Configuração Supabase" e salve novamente.');
-      } else {
-        alert('Não foi possível reenviar a confirmação: ' + msg);
-      }
-    } else {
-      alert('E-mail de confirmação reenviado. Verifique sua caixa de entrada e spam.');
-    }
-  };
+  // ===== Computed Values =====
+  const redirectHint = import.meta.env.VITE_AUTH_REDIRECT_URL ||
+    (typeof window !== 'undefined' ? `${window.location.origin}/` : '');
 
+  // ===== Effects =====
+
+  // Check Supabase configuration
   useEffect(() => {
     ensureSupabaseConfigured()
       .then((client) => setSupabaseReady(!!client))
       .catch(() => setSupabaseReady(false));
   }, []);
 
+  // Load coaches when role is athlete
   useEffect(() => {
-    const loadCoaches = async () => {
-      if (!supabase) {
-        setCoachError('Lista de treinadores indisponível: Supabase não configurado.');
-        return;
-      }
-      setCoachLoading(true);
-      setCoachError(null);
-      const { data, error } = await supabase
-        .from('users')
-        .select('id,name,email')
-        .eq('role', 'coach')
-        .order('name', { ascending: true });
-
-      if (error) {
-        setCoachError('Treinadores indisponíveis no momento. Você poderá vincular depois.');
-      } else {
-        setCoaches((data || []).map((c: any) => ({
-          id: c.id,
-          name: c.name || c.email || 'Treinador',
-          email: c.email
-        })));
-      }
-      setCoachLoading(false);
-    };
-
-    if (!isLogin && formData.role === 'athlete') {
+    if (!isLogin && formData.role === 'athlete' && supabaseReady) {
       loadCoaches();
     }
-  }, [isLogin, formData.role]);
+  }, [isLogin, formData.role, supabaseReady]);
 
-  const filteredCoaches = useMemo(() => {
-    const q = coachQuery.trim().toLowerCase();
-    if (!q) return coaches;
-    return coaches.filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.email && c.email.toLowerCase().includes(q))
-    );
-  }, [coachQuery, coaches]);
+  // ===== Handlers =====
 
-  const validateField = (name: keyof FormData, value: string) => {
-    const newErrors = { ...errors };
+  /**
+   * Load available coaches
+   */
+  const loadCoaches = async () => {
+    setCoachLoading(true);
+    try {
+      const { data, error } = await supabase!
+        .from('users')
+        .select('id, name, email')
+        .eq('role', 'coach')
+        .order('name');
 
-    switch (name) {
-      case 'email':
-        newErrors.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-          ? undefined
-          : 'Email inválido';
-        break;
-      case 'password':
-        newErrors.password = value.length >= 6
-          ? undefined
-          : 'A senha deve ter pelo menos 6 caracteres';
-        break;
-      case 'name':
-        newErrors.name = value.trim().length > 2
-          ? undefined
-          : 'Informe seu nome completo';
-        break;
-      case 'birth_date':
-        newErrors.birth_date = value
-          ? undefined
-          : 'Informe sua data de nascimento';
-        break;
-      case 'coach_id':
-        newErrors.coach_id = value || !coachAvailable
-          ? undefined
-          : 'Selecione um treinador';
-        break;
+      if (error) {
+        logError(error, 'Load Coaches');
+        setCoaches([]);
+      } else {
+        setCoaches(data || []);
+      }
+    } catch (err) {
+      logError(err, 'Load Coaches');
+      setCoaches([]);
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  /**
+   * Validate a single field
+   */
+  const validateField = (fieldName: keyof AuthFormData) => {
+    const value = formData[fieldName];
+    let fieldRules = validationRules[fieldName as keyof typeof validationRules];
+
+    // Special case: coach_id only required for athletes
+    if (fieldName === 'coach_id' && formData.role === 'athlete') {
+      fieldRules = [
+        {
+          required: true,
+          message: 'Selecione um coach'
+        }
+      ];
     }
 
-    setErrors(newErrors);
+    if (!fieldRules) return;
+
+    const error = validateSingleField(fieldName, value, fieldRules);
+
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[fieldName] = error;
+      } else {
+        delete newErrors[fieldName];
+      }
+      return newErrors;
+    });
   };
 
-  const isFormValid = useMemo(() => {
-    const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const validatePassword = (password: string) => password.length >= 6;
-    const validateName = (name: string) => name.trim().length > 2;
-    const validateBirthDate = (birthDate: string) => !!birthDate;
+  /**
+   * Handle input change
+   */
+  const handleChange = (field: keyof AuthFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
 
-    const baseValid = validateEmail(formData.email) && validatePassword(formData.password);
-    const signupValid = isLogin || (validateName(formData.name) && validateBirthDate(formData.birth_date));
-    const coachValid = isLogin || formData.role !== 'athlete' || !!formData.coach_id || !coachAvailable;
-
-    return baseValid && signupValid && coachValid;
-  }, [formData, isLogin, coachAvailable]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    validateField(name as keyof FormData, value);
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
+  /**
+   * Handle form submission
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!supabaseReady) {
+      alert('⚠️ Supabase não está configurado. Configure primeiro.');
+      return;
+    }
+
     setLoading(true);
+    setErrors({});
 
     try {
       if (isLogin) {
+        // ===== LOGIN =====
+        const loginErrors = validateForm(
+          { email: formData.email, password: formData.password },
+          { email: authSchema.email, password: authSchema.password }
+        );
+
+        if (Object.keys(loginErrors).length > 0) {
+          setErrors(loginErrors);
+          setLoading(false);
+          return;
+        }
+
         const { error } = await authHelpers.signIn(formData.email, formData.password);
+
         if (error) {
-          const msg = error.message || '';
-          if (msg.includes('Failed to fetch')) {
-            alert('❌ Falha de conexão com Supabase.\\n\\n💡 Dica: Verifique a configuração do Supabase.');
-          } else if (msg.includes('conexão')) {
-            alert('❌ ' + msg);
-          } else {
-            alert('Erro ao fazer login: ' + msg);
-          }
+          const parsedError = parseSupabaseError(error);
+          logError(error, 'Login');
+          alert(`❌ ${parsedError.message}`);
         }
       } else {
-        const fieldsToCheck: (keyof FormData)[] = ['name', 'birth_date', 'email', 'password', 'role'];
-        fieldsToCheck.forEach(f => validateField(f, formData[f]));
-        if (formData.role === 'athlete') validateField('coach_id', formData.coach_id);
+        // ===== SIGNUP =====
+        const signupData: Record<string, any> = {
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          birth_date: formData.birth_date
+        };
 
-        if (!isFormValid) {
-          const firstErrorKey = Object.keys(errors).find(k => errors[k as keyof FormErrors]);
+        // Add coach_id for athletes
+        if (formData.role === 'athlete') {
+          signupData.coach_id = formData.coach_id;
+        }
+
+        const signupErrors = validateForm(signupData, {
+          email: authSchema.email,
+          password: authSchema.password,
+          name: authSchema.name,
+          birth_date: [
+            {
+              required: true,
+              message: 'Data de nascimento é obrigatória'
+            }
+          ],
+          ...(formData.role === 'athlete' && {
+            coach_id: [
+              {
+                required: true,
+                message: 'Selecione um coach'
+              }
+            ]
+          })
+        });
+
+        if (Object.keys(signupErrors).length > 0) {
+          setErrors(signupErrors);
+          setLoading(false);
+
+          // Focus on first error field
+          const firstErrorKey = Object.keys(signupErrors)[0];
           if (firstErrorKey === 'coach_id' && coachSelectRef.current) {
             coachSelectRef.current.focus();
           }
-          throw new Error('Dados incompletos');
+          return;
         }
 
-        const { error } = await authHelpers.signUp(formData.email, formData.password, {
+        const userData: UserMetadata = {
           name: formData.name,
-          birth_date: formData.birth_date,
           role: formData.role,
-          coach_id: formData.coach_id || null
-        });
+          birth_date: formData.birth_date,
+          ...(formData.coach_id && { coach_id: formData.coach_id })
+        };
+
+        const { error } = await authHelpers.signUp(
+          formData.email,
+          formData.password,
+          userData
+        );
 
         if (error) {
-          const msg = error.message || '';
-          if (msg.includes('Failed to fetch')) {
-            alert('❌ Falha de conexão com Supabase.\\n\\n💡 Dica: Verifique a configuração.');
-          } else if (msg.includes('conexão')) {
-            alert('❌ ' + msg);
-          } else {
-            alert('Erro ao criar conta: ' + msg);
-          }
+          const parsedError = parseSupabaseError(error);
+          logError(error, 'Signup');
+          alert(`❌ ${parsedError.message}`);
         } else {
-          alert('Conta criada com sucesso! Verifique seu email.');
           setSignupEmailSent(true);
+          alert(`✅ Conta criada com sucesso!\\n\\nVerifique seu email para confirmar o cadastro.\\n\\n📧 Email: ${formData.email}`);
         }
       }
-    } catch (error) {
-      console.error('Auth error:', error);
+    } catch (err) {
+      logError(err, 'Auth Submit');
+      alert(`❌ ${formatErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSupabaseConfig = () => {
-    if (!supabaseUrlInput || !supabaseKeyInput) {
-      alert('Preencha a URL e a chave anon do Supabase.');
+  /**
+   * Resend confirmation email
+   */
+  const handleResend = async () => {
+    if (!formData.email) {
+      alert('⚠️ Informe seu email para reenviar a confirmação.');
       return;
     }
+
     try {
-      localStorage.setItem('FALLBACK_SUPABASE_URL', supabaseUrlInput);
-      localStorage.setItem('FALLBACK_SUPABASE_ANON_KEY', supabaseKeyInput);
-      alert('✅ Configuração salva! Recarregando...');
-      window.location.reload();
+      const { error } = await authHelpers.resendSignupEmail(formData.email);
+
+      if (error) {
+        const parsedError = parseSupabaseError(error);
+        alert(`❌ ${parsedError.message}`);
+      } else {
+        alert('✅ Email de confirmação reenviado!\\n\\nVerifique sua caixa de entrada e spam.');
+      }
     } catch (err) {
-      alert('Erro ao salvar configuração.');
+      logError(err, 'Resend Email');
+      alert(`❌ ${formatErrorMessage(err)}`);
     }
   };
 
+  /**
+   * Toggle between login and signup
+   */
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setErrors({});
+    setSignupEmailSent(false);
+  };
+
+  // ===== Render =====
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 py-12">
+      <div className="relative max-w-7xl mx-auto px-4 py-8 md:py-12">
         {/* Header */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-center md:justify-start mb-8 md:mb-12">
           <div className="flex items-center gap-4">
             <SynthoniaLogo />
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Synthonia
               </h1>
-              <p className="text-sm text-gray-300">Treinamento inteligente e bem-estar integrado</p>
+              <p className="text-xs md:text-sm text-gray-300">Treinamento inteligente e bem-estar integrado</p>
             </div>
           </div>
-          {!supabaseConfigured && (
-            <Button
-              onClick={() => setShowSupabaseConfig(!showSupabaseConfig)}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              ⚙️ Configurar Supabase
-            </Button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Features Section */}
-          <div className="space-y-6">
+          <div className="space-y-6 order-2 lg:order-1">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Potencialize seu desempenho
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                Otimize seu desempenho
               </h2>
-              <p className="text-gray-300">
-                Monitore, analise e otimize seu treinamento com inteligência artificial
+              <p className="text-gray-300 text-sm md:text-base">
+                Monitore treinos, recuperação e bem-estar em uma plataforma integrada
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FeatureCard
                 icon={<Activity className="h-8 w-8 text-blue-400" />}
-                title="Autoavaliação Diária"
-                description="Sono, energia, humor e recuperação"
+                title="Monitoramento Diário"
+                description="Acompanhe sono, fadiga, humor e recuperação"
               />
               <FeatureCard
-                icon={<Target className="h-8 w-8 text-green-400" />}
-                title="Metas e Planejamento"
-                description="Acompanhe treinos e objetivos"
+                icon={<Target className="h-8 w-8 text-purple-400" />}
+                title="Análise de Treinos"
+                description="TSS, RPE, TRIMP e métricas avançadas"
               />
               <FeatureCard
-                icon={<TrendingUp className="h-8 w-8 text-purple-400" />}
-                title="Insights e Tendências"
-                description="Análises com base em seus dados"
+                icon={<TrendingUp className="h-8 w-8 text-green-400" />}
+                title="Insights Inteligentes"
+                description="Recomendações baseadas em dados"
               />
               <FeatureCard
-                icon={<Users className="h-8 w-8 text-orange-400" />}
-                title="Para Equipes"
-                description="Treinadores acompanham múltiplos atletas"
-              />
-              <FeatureCard
-                icon={<Award className="h-8 w-8 text-yellow-400" />}
-                title="Conquistas"
-                description="Gamificação e motivação"
-              />
-              <FeatureCard
-                icon={<Brain className="h-8 w-8 text-pink-400" />}
-                title="IA Integrada"
-                description="Recomendações personalizadas"
+                icon={<Users className="h-8 w-8 text-yellow-400" />}
+                title="Coach & Atleta"
+                description="Acompanhamento profissional integrado"
               />
             </div>
           </div>
 
-          {/* Auth Form Section */}
-          <div className="lg:sticky lg:top-8">
-            {showSupabaseConfig && !supabaseConfigured ? (
-              <Card className="bg-gray-800/90 backdrop-blur-md border-gray-700 shadow-2xl">
-                <CardHeader>
-                  <h3 className="text-xl font-bold text-white">Configuração Supabase</h3>
-                  <p className="text-sm text-gray-300">Configure sua conexão com o Supabase</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
+          {/* Auth Form */}
+          <Card className="shadow-2xl border-gray-700/50 order-1 lg:order-2">
+            <CardHeader>
+              <h2 className="text-xl md:text-2xl font-bold text-white text-center">
+                {isLogin ? 'Entrar' : 'Criar Conta'}
+              </h2>
+              <p className="text-sm text-gray-400 text-center mt-2">
+                {isLogin
+                  ? 'Acesse sua conta para continuar'
+                  : 'Comece sua jornada de otimização'}
+              </p>
+            </CardHeader>
+
+            <CardContent className="p-6">
+              {signupEmailSent ? (
+                // Email sent confirmation
+                <div className="space-y-4 text-center">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6">
+                    <Mail className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">
+                      Email Enviado!
+                    </h3>
+                    <p className="text-sm text-gray-300 mb-4">
+                      Enviamos um link de confirmação para:
+                    </p>
+                    <p className="text-blue-400 font-medium mb-4">
+                      {formData.email}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Verifique sua caixa de entrada e spam
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={handleResend}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Reenviar Email
+                    </Button>
+                    <Button
+                      onClick={toggleMode}
+                      variant="ghost"
+                      className="w-full"
+                    >
+                      Voltar para Login
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Auth form
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Email */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      URL do Projeto
+                      <Mail className="inline h-4 w-4 mr-2" />
+                      Email
                     </label>
                     <input
-                      type="text"
-                      value={supabaseUrlInput}
-                      onChange={(e) => setSupabaseUrlInput(e.target.value)}
-                      placeholder="https://seu-projeto.supabase.co"
-                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      onBlur={() => validateField('email')}
+                      className={`w-full px-4 py-3 bg-gray-800 border ${errors.email ? 'border-red-500' : 'border-gray-700'
+                        } rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                      placeholder="seu@email.com"
+                      disabled={loading}
                     />
+                    {errors.email && (
+                      <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+                    )}
                   </div>
+
+                  {/* Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Anon Key
+                      <Lock className="inline h-4 w-4 mr-2" />
+                      Senha
                     </label>
                     <input
                       type="password"
-                      value={supabaseKeyInput}
-                      onChange={(e) => setSupabaseKeyInput(e.target.value)}
-                      placeholder="sua_chave_anon_aqui"
-                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      onBlur={() => validateField('password')}
+                      className={`w-full px-4 py-3 bg-gray-800 border ${errors.password ? 'border-red-500' : 'border-gray-700'
+                        } rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                      placeholder="••••••••"
+                      disabled={loading}
                     />
+                    {errors.password && (
+                      <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+                    )}
                   </div>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleSupabaseConfig}
-                      disabled={!supabaseUrlInput || !supabaseKeyInput}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      Salvar e Recarregar
-                    </Button>
-                    <Button
-                      onClick={() => setShowSupabaseConfig(false)}
-                      className="bg-gray-700 hover:bg-gray-600"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : signupEmailSent ? (
-              <Card className="bg-gray-800/90 backdrop-blur-md border-gray-700 shadow-2xl">
-                <CardContent className="py-12 text-center space-y-4">
-                  <div className="flex justify-center">
-                    <Mail className="h-16 w-16 text-blue-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white">Verifique seu email</h3>
-                  <p className="text-gray-300">
-                    Enviamos um link de confirmação para <strong className="text-blue-400">{formData.email}</strong>
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    O link redirecionará para: <code className="text-blue-400">{redirectHint}</code>
-                  </p>
-                  <Button onClick={handleResend} className="mt-4 bg-blue-600 hover:bg-blue-700">
-                    Reenviar Email
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-gray-800/90 backdrop-blur-md border-gray-700 shadow-2xl">
-                <CardHeader>
-                  <h3 className="text-2xl font-bold text-white">
-                    {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
-                  </h3>
-                  <p className="text-sm text-gray-300">
-                    {isLogin ? 'Entre para continuar' : 'Comece sua jornada hoje'}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        <Mail className="inline h-4 w-4 mr-1" />
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="seu@email.com"
-                      />
-                      {errors.email && (
-                        <p className="mt-1 text-sm text-red-400">{errors.email}</p>
-                      )}
-                    </div>
 
-                    {/* Password */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        <Lock className="inline h-4 w-4 mr-1" />
-                        Senha
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="••••••••"
-                      />
-                      {errors.password && (
-                        <p className="mt-1 text-sm text-red-400">{errors.password}</p>
-                      )}
-                    </div>
+                  {/* Signup fields */}
+                  {!isLogin && (
+                    <>
+                      {/* Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <UserIcon className="inline h-4 w-4 mr-2" />
+                          Nome Completo
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => handleChange('name', e.target.value)}
+                          onBlur={() => validateField('name')}
+                          className={`w-full px-4 py-3 bg-gray-800 border ${errors.name ? 'border-red-500' : 'border-gray-700'
+                            } rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                          placeholder="João Silva"
+                          disabled={loading}
+                        />
+                        {errors.name && (
+                          <p className="text-red-400 text-xs mt-1">{errors.name}</p>
+                        )}
+                      </div>
 
-                    {/* Signup fields */}
-                    {!isLogin && (
-                      <>
+                      {/* Birth Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <Calendar className="inline h-4 w-4 mr-2" />
+                          Data de Nascimento
+                        </label>
+                        <CustomDateInputLight
+                          value={formData.birth_date}
+                          onChange={(value) => handleChange('birth_date', value)}
+                          onBlur={() => validateField('birth_date')}
+                          error={errors.birth_date}
+                          disabled={loading}
+                        />
+                        {errors.birth_date && (
+                          <p className="text-red-400 text-xs mt-1">{errors.birth_date}</p>
+                        )}
+                      </div>
+
+                      {/* Role */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <Shield className="inline h-4 w-4 mr-2" />
+                          Tipo de Conta
+                        </label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => handleChange('role', e.target.value as any)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          disabled={loading}
+                        >
+                          <option value="athlete">Atleta</option>
+                          <option value="coach">Coach</option>
+                          <option value="physiotherapist">Fisioterapeuta</option>
+                        </select>
+                      </div>
+
+                      {/* Coach selection for athletes */}
+                      {formData.role === 'athlete' && (
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">
-                            <UserIcon className="inline h-4 w-4 mr-1" />
-                            Nome Completo
-                          </label>
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="Seu nome"
-                          />
-                          {errors.name && (
-                            <p className="mt-1 text-sm text-red-400">{errors.name}</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            <Calendar className="inline h-4 w-4 mr-1" />
-                            Data de Nascimento
-                          </label>
-                          <CustomDateInputLight
-                            value={formData.birth_date}
-                            onChange={(value) => {
-                              setFormData({ ...formData, birth_date: value });
-                              validateField('birth_date', value);
-                            }}
-                            required={!isLogin}
-                          />
-                          {errors.birth_date && (
-                            <p className="mt-1 text-sm text-red-400">{errors.birth_date}</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            <Shield className="inline h-4 w-4 mr-1" />
-                            Função
+                            <Users className="inline h-4 w-4 mr-2" />
+                            Selecione seu Coach
                           </label>
                           <select
-                            name="role"
-                            value={formData.role}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            ref={coachSelectRef}
+                            value={formData.coach_id}
+                            onChange={(e) => handleChange('coach_id', e.target.value)}
+                            onBlur={() => validateField('coach_id')}
+                            className={`w-full px-4 py-3 bg-gray-800 border ${errors.coach_id ? 'border-red-500' : 'border-gray-700'
+                              } rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                            disabled={loading || coachLoading}
                           >
-                            <option value="athlete">Atleta</option>
-                            <option value="coach">Treinador</option>
-                            <option value="physiotherapist">Fisioterapeuta</option>
+                            <option value="">Selecione um coach...</option>
+                            {coaches.map(coach => (
+                              <option key={coach.id} value={coach.id}>
+                                {coach.name} ({coach.email})
+                              </option>
+                            ))}
                           </select>
+                          {errors.coach_id && (
+                            <p className="text-red-400 text-xs mt-1">{errors.coach_id}</p>
+                          )}
+                          {coachLoading && (
+                            <p className="text-gray-400 text-xs mt-1">Carregando coaches...</p>
+                          )}
                         </div>
+                      )}
+                    </>
+                  )}
 
-                        {formData.role === 'athlete' && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                              Treinador (opcional)
-                            </label>
-                            {coachLoading ? (
-                              <p className="text-sm text-gray-400">Carregando treinadores...</p>
-                            ) : coachAvailable ? (
-                              <>
-                                <input
-                                  type="text"
-                                  value={coachQuery}
-                                  onChange={(e) => setCoachQuery(e.target.value)}
-                                  placeholder="Buscar treinador..."
-                                  className="w-full px-4 py-2 mb-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                                <select
-                                  ref={coachSelectRef}
-                                  name="coach_id"
-                                  value={formData.coach_id}
-                                  onChange={(e) => {
-                                    setFormData(prev => ({ ...prev, coach_id: e.target.value }));
-                                    validateField('coach_id', e.target.value);
-                                  }}
-                                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                >
-                                  <option value="">Selecione um treinador</option>
-                                  {filteredCoaches.map(c => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name} ({c.email})
-                                    </option>
-                                  ))}
-                                </select>
-                              </>
-                            ) : coachError ? (
-                              <p className="text-sm text-yellow-400">{coachError}</p>
-                            ) : null}
-                            {errors.coach_id && (
-                              <p className="mt-1 text-sm text-red-400">{errors.coach_id}</p>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
+                  {/* Submit button */}
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    disabled={loading || !supabaseReady}
+                  >
+                    {loading ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
+                  </Button>
 
-                    <Button
-                      type="submit"
-                      disabled={loading || !isFormValid}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                  {/* Toggle mode */}
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={toggleMode}
+                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      disabled={loading}
                     >
-                      {loading ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
-                    </Button>
+                      {isLogin
+                        ? 'Não tem conta? Criar uma agora'
+                        : 'Já tem conta? Fazer login'}
+                    </button>
+                  </div>
 
-                    <div className="text-center pt-4 border-t border-gray-700">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsLogin(!isLogin);
-                          setErrors({});
-                        }}
-                        className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium"
-                      >
-                        {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
-                      </button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  {/* Redirect hint */}
+                  {!isLogin && redirectHint && (
+                    <p className="text-xs text-gray-500 text-center mt-4">
+                      Após confirmar o email, você será redirecionado para: {redirectHint}
+                    </p>
+                  )}
+                </form>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
