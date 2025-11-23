@@ -12,6 +12,7 @@ import ReadinessGauge from './ReadinessGauge';
 import QuickStats from './QuickStats';
 import CircularMetrics from './CircularMetrics';
 import CircularMetricsGrid from './CircularMetricsGrid';
+import DailyAssessment from '../forms/DailyAssessment';
 import TrainingChart from './TrainingChart';
 import RecommendationCard from './RecommendationCard';
 import MetricsGrid from './MetricsGrid';
@@ -36,7 +37,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [currentView, setCurrentView] = useState<'overview' | 'analytics' | 'history' | 'settings' | 'sleep' | 'results'>('overview');
+  const [currentView, setCurrentView] = useState<'overview' | 'assessment' | 'analytics' | 'history' | 'settings' | 'sleep' | 'results'>('overview');
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([]);
   const [todayData, setTodayData] = useState<DailyData | null>(null);
@@ -109,6 +110,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     });
   };
 
+  const handleAssessmentComplete = async () => {
+    await loadData();
+    setCurrentView('overview');
+  };
+
 
 
   if (loading) {
@@ -133,6 +139,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     recommendation = getTrainingRecommendation(readinessScore, metrics.tsb);
   }
 
+  // Renderização condicional para Assessment
+  if (currentView === 'assessment') {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
+        <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentView('overview')}
+              className="mb-4"
+              size="sm"
+            >
+              ← Voltar ao Dashboard
+            </Button>
+          </div>
+          <DailyAssessment onComplete={handleAssessmentComplete} />
+        </main>
+      </div>
+    );
+  }
+
+  // Renderização condicional para Analytics
   if (currentView === 'analytics') {
     return (
       <div className="min-h-screen bg-gray-900">
@@ -269,11 +298,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             className="inline-flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white border-purple-600 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
           >
-            <Brain className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
-            <span>Análise IA Completa</span>
-          </Button>
+            <Brain className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />          </Button>
 
           <Button 
+            variant="outline" 
+            onClick={() => setCurrentView('assessment')}
+            className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white border-green-600 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
+            size="sm"
+          >
+            <span>📝</span>
+            <span>Nova Avaliação Diária</span>
+          </Button>
+
+          <Button  
             variant="outline" 
             onClick={() => setCurrentView('sleep')}
             className="inline-flex items-center space-x-2 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
