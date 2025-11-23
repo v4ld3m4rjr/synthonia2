@@ -92,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - chartPeriod);
-    
+
     return dailyData.filter(d => {
       const date = new Date(d.date);
       return date >= startDate && date <= endDate;
@@ -103,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - chartPeriod);
-    
+
     return trainingSessions.filter(s => {
       const date = new Date(s.date);
       return date >= startDate && date <= endDate;
@@ -131,7 +131,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   // Calcular readiness score atual
   let readinessScore = 50; // Default
   let recommendation = getTrainingRecommendation(50, 0);
-  
+
   if (todayData) {
     readinessScore = calculateReadinessScore(todayData);
     const today = new Date().toISOString().split('T')[0];
@@ -146,8 +146,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
           <div className="mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="mb-4"
               size="sm"
@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               ← Voltar ao Dashboard
             </Button>
           </div>
-          <DailyAssessment onComplete={handleAssessmentComplete} />
+          <DailyAssessment user={editableUser} onComplete={handleAssessmentComplete} />
         </main>
       </div>
     );
@@ -168,8 +168,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="mb-4"
               size="sm"
@@ -184,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <div className="text-sm">Verifique sua configuração do Supabase e tente novamente. Em dev, veja o console.</div>
               </div>
             }>
-              <AnalyticsView 
+              <AnalyticsView
                 user={user}
                 dailyData={dailyData}
                 trainingSessions={trainingSessions}
@@ -202,8 +202,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
           <div className="mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="mb-4"
               size="sm"
@@ -211,7 +211,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               ← Voltar ao Dashboard
             </Button>
           </div>
-          <HistoryView 
+          <HistoryView
             user={user}
             dailyData={dailyData}
             trainingSessions={trainingSessions}
@@ -227,8 +227,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
           <div className="mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="mb-4"
               size="sm"
@@ -248,8 +248,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
           <div className="mb-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="mb-4"
               size="sm"
@@ -269,8 +269,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
         <main>
           <div className="absolute top-4 left-4 z-10">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('overview')}
               className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
               size="sm"
@@ -278,8 +278,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               ← Voltar ao Dashboard
             </Button>
           </div>
--          <ResultsAnalysisPage />
-+          <FullAIAnalysis user={editableUser} dailyData={dailyData} trainingSessions={trainingSessions} />
+          -          <ResultsAnalysisPage />
+          +          <FullAIAnalysis user={editableUser} dailyData={dailyData} trainingSessions={trainingSessions} />
         </main>
       </div>
     );
@@ -288,20 +288,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Header user={editableUser} onSignOut={onLogout} currentView={currentView} setCurrentView={setCurrentView} />
-      
+
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
         {/* Quick Actions */}
         <div className="mb-8 flex w-full items-center gap-2 flex-wrap overflow-x-hidden">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentView('results')}
             className="inline-flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white border-purple-600 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
           >
             <Brain className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />          </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentView('assessment')}
             className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white border-green-600 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
@@ -310,8 +310,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <span>Nova Avaliação Diária</span>
           </Button>
 
-          <Button  
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentView('sleep')}
             className="inline-flex items-center space-x-2 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
@@ -320,8 +320,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <span>Modelo de Sono</span>
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentView('analytics')}
             className="inline-flex items-center space-x-2 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
@@ -330,8 +330,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <span>Ver Análises</span>
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentView('history')}
             className="inline-flex items-center space-x-2 shrink-0 whitespace-nowrap px-2 sm:px-2 md:px-3 py-0.5 sm:py-1 text-[10px] sm:text-[11px] md:text-xs"
             size="sm"
@@ -340,8 +340,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <span>Histórico</span>
           </Button>
         </div>
-        
-        
+
+
         {/* Visualização Circular dos Principais Indicadores */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-6">Principais Indicadores</h2>
@@ -359,7 +359,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {/* Métricas Principais em Formato Circular */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-6">Métricas Principais</h2>
-          <CircularMetricsGrid 
+          <CircularMetricsGrid
             dailyData={dailyData}
             trainingSessions={trainingSessions}
           />
@@ -389,15 +389,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white">Variáveis Medidas e Calculadas</h2>
-            <TimeSelector 
-              selectedPeriod={chartPeriod} 
-              onPeriodChange={setChartPeriod} 
+            <TimeSelector
+              selectedPeriod={chartPeriod}
+              onPeriodChange={setChartPeriod}
             />
           </div>
         </div>
-        
+
         <div className="mb-8">
-          <MetricsGrid 
+          <MetricsGrid
             dailyData={dailyData}
             trainingSessions={trainingSessions}
             selectedPeriod={chartPeriod}
@@ -406,13 +406,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         {/* Interactive Dashboard */}
         <div className="mb-8 w-full max-w-[100vw] px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden">
-          <InteractiveDashboard 
+          <InteractiveDashboard
             dailyData={dailyData}
             trainingSessions={trainingSessions}
             selectedPeriod={chartPeriod}
           />
         </div>
-        
+
         {/* Module Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Removido conforme solicitação: Análise IA */}
