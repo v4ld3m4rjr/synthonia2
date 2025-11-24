@@ -69,6 +69,8 @@ CREATE POLICY "Users can insert own data"
 -- Daily Data
 DROP POLICY IF EXISTS "Users can read own daily data" ON daily_data;
 DROP POLICY IF EXISTS "Coaches can read athletes daily data" ON daily_data;
+DROP POLICY IF EXISTS "Users can insert own daily data" ON daily_data;
+DROP POLICY IF EXISTS "Users can update own daily data" ON daily_data;
 
 CREATE POLICY "Users can read own daily data"
   ON daily_data FOR SELECT
@@ -99,6 +101,8 @@ CREATE POLICY "Users can update own daily data"
 -- Training Sessions
 DROP POLICY IF EXISTS "Users can read own training sessions" ON training_sessions;
 DROP POLICY IF EXISTS "Coaches can read athletes training sessions" ON training_sessions;
+DROP POLICY IF EXISTS "Users can insert own training sessions" ON training_sessions;
+DROP POLICY IF EXISTS "Users can update own training sessions" ON training_sessions;
 
 CREATE POLICY "Users can read own training sessions"
   ON training_sessions FOR SELECT
