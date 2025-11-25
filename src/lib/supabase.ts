@@ -83,7 +83,7 @@ const getRuntimeConfig = async (): Promise<{ url?: string; anonKey?: string }> =
           try {
             window.localStorage.setItem('SUPABASE_URL', jsonUrl);
             window.localStorage.setItem('SUPABASE_ANON_KEY', jsonKey);
-          } catch (_) {}
+          } catch (_) { }
           return { url: jsonUrl, anonKey: jsonKey };
         }
       }
@@ -136,7 +136,7 @@ export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null>
     try {
       window.localStorage.removeItem('SUPABASE_URL');
       window.localStorage.removeItem('SUPABASE_ANON_KEY');
-    } catch (_) {}
+    } catch (_) { }
     console.warn('[supabase] Nenhuma configuração Supabase válida. Continuando em modo local.');
     return null;
   }
@@ -145,7 +145,7 @@ export const ensureSupabaseConfigured = async (): Promise<SupabaseClient | null>
   try {
     window.localStorage.setItem('SUPABASE_URL', chosen.url!);
     window.localStorage.setItem('SUPABASE_ANON_KEY', chosen.key!);
-  } catch (_) {}
+  } catch (_) { }
 
   console.info('[supabase] Conectividade OK via', chosen.source, '. Criando cliente Supabase');
   supabase = createClient(chosen.url!, chosen.key!, {
@@ -209,7 +209,7 @@ export const authHelpers = {
         };
         try {
           localStorage.setItem('LOCAL_AUTH_USER', JSON.stringify({ ...localUser, password }));
-        } catch (_) {}
+        } catch (_) { }
         console.warn('[auth] Supabase indisponível. Conta local criada.');
         return { data: { user: localUser }, error: null } as any;
       } catch (err) {
@@ -289,7 +289,7 @@ export const authHelpers = {
   async signOut() {
     const client = await ensureSupabaseConfigured();
     if (!client) {
-      try { localStorage.removeItem('LOCAL_AUTH_USER'); } catch (_) {}
+      try { localStorage.removeItem('LOCAL_AUTH_USER'); } catch (_) { }
       return { error: null } as any;
     }
     const { error } = await client.auth.signOut();
@@ -304,7 +304,7 @@ export const authHelpers = {
         if (local) {
           return { id: local.id, email: local.email, user_metadata: local.user_metadata } as any;
         }
-      } catch (_) {}
+      } catch (_) { }
       return null;
     }
     const { data: { user } } = await supabase.auth.getUser();
@@ -328,7 +328,7 @@ export const dbHelpers = {
         try {
           const key = `daily_data_local_${userId}`;
           local = JSON.parse(localStorage.getItem(key) || '[]');
-        } catch {}
+        } catch { }
         const localFiltered = local.filter((e: any) => {
           const d = e?.date;
           return typeof d === 'string' && d >= startISO && d <= endISO;
@@ -360,7 +360,7 @@ export const dbHelpers = {
       try {
         const key = `daily_data_local_${userId}`;
         local = JSON.parse(localStorage.getItem(key) || '[]');
-      } catch {}
+      } catch { }
       const localFiltered = local.filter((e: any) => {
         const d = e?.date;
         return typeof d === 'string' && d >= startISO && d <= endISO;
@@ -389,7 +389,7 @@ export const dbHelpers = {
         try {
           const key = `training_sessions_local_${userId}`;
           local = JSON.parse(localStorage.getItem(key) || '[]');
-        } catch {}
+        } catch { }
         const localFiltered = local.filter((e: any) => {
           const d = e?.date;
           return typeof d === 'string' && d >= startISO && d <= endISO;
@@ -424,7 +424,7 @@ export const dbHelpers = {
       try {
         const key = `training_sessions_local_${userId}`;
         local = JSON.parse(localStorage.getItem(key) || '[]');
-      } catch {}
+      } catch { }
       const localFiltered = local.filter((e: any) => {
         const d = e?.date;
         return typeof d === 'string' && d >= startISO && d <= endISO;
@@ -440,7 +440,7 @@ export const dbHelpers = {
     }
   },
 
-  async insertDailyData(entry: Partial<DailyData>) {
+  async saveDailyData(entry: Partial<DailyData>) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
       // Fallback local: salvar em localStorage quando Supabase indisponível
@@ -471,7 +471,7 @@ export const dbHelpers = {
     }
   },
 
-  async insertTrainingSession(entry: Partial<TrainingSession>) {
+  async saveTrainingSession(entry: Partial<TrainingSession>) {
     const client = await ensureSupabaseConfigured();
     if (!client) {
       // Fallback local: salvar em localStorage quando Supabase indisponível
