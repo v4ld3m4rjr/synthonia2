@@ -1,392 +1,172 @@
 -- =====================================================
--- Synthonia - Schema Definitivo
--- Versão: 2.0
--- Data: 2025-01-22
--- Descrição: Schema completo e otimizado
+-- Synthonia 2.0 - Optimized Database Schema
 -- =====================================================
 
--- =====================================================
--- 1. EXTENSIONS
--- =====================================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- =====================================================
--- 2. USERS TABLE
--- =====================================================
-CREATE TABLE IF NOT EXISTS users (
+-- 1. PROFILES (formerly users)
+-- Extends auth.users
+CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email text UNIQUE NOT NULL,
-  name text NOT NULL,
-  role text NOT NULL CHECK (role IN ('athlete', 'coach', 'physiotherapist')),
-  coach_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  full_name text,
+  role text NOT NULL CHECK (role IN ('athlete', 'coach')),
   avatar_url text,
-  birth_date date,
+  coach_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- Índices para users
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_coach_id ON users(coach_id);
-CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
+-- RLS for profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public profiles are viewable by everyone" 
+ON public.profiles FOR SELECT 
+USING (true);
 
--- RLS Policies para users
-DROP POLICY IF EXISTS "Users can read own data" ON users;
-CREATE POLICY "Users can read own data"
-  ON users FOR SELECT
-  TO authenticated
-  USING (auth.uid() = id);
+CREATE POLICY "Users can insert their own profile" 
+ON public.profiles FOR INSERT 
+WITH CHECK (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Users can insert own data" ON users;
-CREATE POLICY "Users can insert own data"
-  ON users FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile" 
+ON public.profiles FOR UPDATE 
+USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Users can update own data" ON users;
-CREATE POLICY "Users can update own data"
-  ON users FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "Coaches can read their athletes data" ON users;
-CREATE POLICY "Coaches can read their athletes data"
-  ON users FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users coach 
-      WHERE coach.id = auth.uid() 
-      AND coach.role = 'coach'
-      AND users.coach_id = coach.id
-    )
-  );
-
-DROP POLICY IF EXISTS "Anonymous can select coaches" ON users;
-CREATE POLICY "Anonymous can select coaches"
-  ON users FOR SELECT
-  TO anon
-  USING (role = 'coach');
-
-DROP POLICY IF EXISTS "Authenticated can select coaches or own" ON users;
-CREATE POLICY "Authenticated can select coaches or own"
-  ON users FOR SELECT
-  TO authenticated
-  USING (role = 'coach' OR auth.uid() = id);
-
--- =====================================================
--- 3. DAILY DATA TABLE
--- =====================================================
-CREATE TABLE IF NOT EXISTS daily_data (
+-- 2. DAILY ASSESSMENTS (formerly daily_data)
+CREATE TABLE IF NOT EXISTS public.daily_assessments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  date date NOT NULL,
+  athlete_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  date date NOT NULL DEFAULT CURRENT_DATE,
   
-  -- Sono
+  -- Wellness Metrics (1-10)
   sleep_quality integer CHECK (sleep_quality BETWEEN 1 AND 10),
-  sleep_duration numeric(4,2) CHECK (sleep_duration > 0),
-  sleep_regularity integer CHECK (sleep_regularity BETWEEN 1 AND 10),
-  
-  -- Bem-estar
-  fatigue_level integer CHECK (fatigue_level BETWEEN 1 AND 10),
-  exhaustion integer CHECK (exhaustion BETWEEN 1 AND 10),
+  fatigue integer CHECK (fatigue BETWEEN 1 AND 10),
+  soreness integer CHECK (soreness BETWEEN 1 AND 10),
+  stress integer CHECK (stress BETWEEN 1 AND 10),
   mood integer CHECK (mood BETWEEN 1 AND 10),
-  muscle_soreness integer CHECK (muscle_soreness BETWEEN 1 AND 10),
-  stress_level integer CHECK (stress_level BETWEEN 1 AND 10),
   
-  -- Recuperação
-  tqr integer CHECK (tqr BETWEEN 0 AND 20),
-  psr integer CHECK (psr BETWEEN 0 AND 100),
-  resting_hr integer CHECK (resting_hr > 0),
-  hrv numeric(5,2) CHECK (hrv >= 0),
+  -- Physiological Metrics
+  resting_hr integer,
+  hrv numeric(5,2),
   
-  -- Calculados
-  readiness_score numeric(5,2) CHECK (readiness_score BETWEEN 0 AND 100),
+  -- Calculated
+  readiness_score numeric(5,2),
   
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
   
-  UNIQUE(user_id, date)
+  UNIQUE(athlete_id, date)
 );
 
--- Índices para daily_data
-CREATE INDEX IF NOT EXISTS idx_daily_data_user_id ON daily_data(user_id);
-CREATE INDEX IF NOT EXISTS idx_daily_data_date ON daily_data(date DESC);
-CREATE INDEX IF NOT EXISTS idx_daily_data_user_date ON daily_data(user_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_daily_data_created_at ON daily_data(created_at DESC);
+-- RLS for daily_assessments
+ALTER TABLE public.daily_assessments ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS
-ALTER TABLE daily_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Athletes can CRUD own assessments" 
+ON public.daily_assessments FOR ALL 
+USING (auth.uid() = athlete_id);
 
--- RLS Policies para daily_data
-DROP POLICY IF EXISTS "Users can read own daily data" ON daily_data;
-CREATE POLICY "Users can read own daily data"
-  ON daily_data FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id);
+CREATE POLICY "Coaches can view their athletes assessments" 
+ON public.daily_assessments FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = daily_assessments.athlete_id 
+    AND coach_id = auth.uid()
+  )
+);
 
-DROP POLICY IF EXISTS "Users can insert own daily data" ON daily_data;
-CREATE POLICY "Users can insert own daily data"
-  ON daily_data FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can update own daily data" ON daily_data;
-CREATE POLICY "Users can update own daily data"
-  ON daily_data FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can delete own daily data" ON daily_data;
-CREATE POLICY "Users can delete own daily data"
-  ON daily_data FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Coaches can read their athletes daily data" ON daily_data;
-CREATE POLICY "Coaches can read their athletes daily data"
-  ON daily_data FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = daily_data.user_id 
-      AND users.coach_id = auth.uid()
-    )
-  );
-
--- =====================================================
--- 4. TRAINING SESSIONS TABLE
--- =====================================================
-CREATE TABLE IF NOT EXISTS training_sessions (
+-- 3. TRAINING LOGS (formerly training_sessions)
+CREATE TABLE IF NOT EXISTS public.training_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  date date NOT NULL,
+  athlete_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  date date NOT NULL DEFAULT CURRENT_DATE,
   
-  -- Dados básicos
-  duration integer NOT NULL CHECK (duration > 0),
-  rpe integer NOT NULL CHECK (rpe BETWEEN 1 AND 10),
-  training_type text NOT NULL,
+  session_type text NOT NULL, -- e.g., 'Strength', 'Cardio', 'Recovery'
+  duration_minutes integer NOT NULL CHECK (duration_minutes > 0),
+  rpe integer CHECK (rpe BETWEEN 1 AND 10),
   
-  -- Métricas opcionais
-  volume numeric(10,2),
-  intensity numeric(5,2),
-  
-  -- Calculados
-  tss numeric(6,2) CHECK (tss >= 0),
-  pse integer CHECK (pse >= 0),
-  trimp numeric(6,2) CHECK (trimp >= 0),
+  -- Calculated Load (duration * rpe)
+  load numeric(10,2),
   
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- Índices para training_sessions
-CREATE INDEX IF NOT EXISTS idx_training_sessions_user_id ON training_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_training_sessions_date ON training_sessions(date DESC);
-CREATE INDEX IF NOT EXISTS idx_training_sessions_user_date ON training_sessions(user_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_training_sessions_type ON training_sessions(training_type);
-CREATE INDEX IF NOT EXISTS idx_training_sessions_created_at ON training_sessions(created_at DESC);
+-- RLS for training_logs
+ALTER TABLE public.training_logs ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS
-ALTER TABLE training_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Athletes can CRUD own logs" 
+ON public.training_logs FOR ALL 
+USING (auth.uid() = athlete_id);
 
--- RLS Policies para training_sessions
-DROP POLICY IF EXISTS "Users can read own training sessions" ON training_sessions;
-CREATE POLICY "Users can read own training sessions"
-  ON training_sessions FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id);
+CREATE POLICY "Coaches can view their athletes logs" 
+ON public.training_logs FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = training_logs.athlete_id 
+    AND coach_id = auth.uid()
+  )
+);
 
-DROP POLICY IF EXISTS "Users can insert own training sessions" ON training_sessions;
-CREATE POLICY "Users can insert own training sessions"
-  ON training_sessions FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+-- 4. FUNCTIONS & TRIGGERS
 
-DROP POLICY IF EXISTS "Users can update own training sessions" ON training_sessions;
-CREATE POLICY "Users can update own training sessions"
-  ON training_sessions FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can delete own training sessions" ON training_sessions;
-CREATE POLICY "Users can delete own training sessions"
-  ON training_sessions FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Coaches can read their athletes training sessions" ON training_sessions;
-CREATE POLICY "Coaches can read their athletes training sessions"
-  ON training_sessions FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = training_sessions.user_id 
-      AND users.coach_id = auth.uid()
-    )
-  );
-
--- =====================================================
--- 5. FUNCTIONS
--- =====================================================
-
--- Function to calculate readiness score
-CREATE OR REPLACE FUNCTION calculate_readiness_score()
+-- Auto-calculate Readiness Score
+CREATE OR REPLACE FUNCTION calculate_readiness()
 RETURNS TRIGGER AS $$
-DECLARE
-  score numeric(5,2);
 BEGIN
-  -- Calculate weighted average of wellness metrics
-  score := (
-    COALESCE(NEW.sleep_quality, 5) * 0.25 +
-    COALESCE(NEW.fatigue_level, 5) * 0.20 +
-    COALESCE(NEW.mood, 5) * 0.15 +
-    COALESCE(NEW.muscle_soreness, 5) * 0.15 +
-    COALESCE(NEW.stress_level, 5) * 0.15 +
-    COALESCE(NEW.hrv, 50) / 10 * 0.10
-  ) * 10;
-  
-  -- Ensure score is between 0 and 100
-  NEW.readiness_score := LEAST(GREATEST(score, 0), 100);
+  -- Simple weighted average algorithm
+  -- (Sleep + Mood + (10-Fatigue) + (10-Soreness) + (10-Stress)) / 5 * 10
+  -- This is a placeholder logic, can be refined
+  NEW.readiness_score := (
+    COALESCE(NEW.sleep_quality, 5) + 
+    COALESCE(NEW.mood, 5) + 
+    (11 - COALESCE(NEW.fatigue, 5)) + 
+    (11 - COALESCE(NEW.soreness, 5)) + 
+    (11 - COALESCE(NEW.stress, 5))
+  ) / 5.0 * 10.0;
   
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate TSS (Training Stress Score)
-CREATE OR REPLACE FUNCTION calculate_tss()
+CREATE TRIGGER trigger_calculate_readiness
+BEFORE INSERT OR UPDATE ON public.daily_assessments
+FOR EACH ROW EXECUTE FUNCTION calculate_readiness();
+
+-- Auto-calculate Training Load
+CREATE OR REPLACE FUNCTION calculate_load()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- TSS = (duration in hours × RPE/10 × 100)
-  IF NEW.duration IS NOT NULL AND NEW.rpe IS NOT NULL THEN
-    NEW.tss := (NEW.duration::numeric / 60.0) * (NEW.rpe::numeric / 10.0) * 100;
+  IF NEW.duration_minutes IS NOT NULL AND NEW.rpe IS NOT NULL THEN
+    NEW.load := NEW.duration_minutes * NEW.rpe;
   END IF;
-  
-  -- Calculate PSE (Perceived Session Exertion)
-  IF NEW.duration IS NOT NULL AND NEW.rpe IS NOT NULL THEN
-    NEW.pse := NEW.duration * NEW.rpe;
-  END IF;
-  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to handle new user creation
+CREATE TRIGGER trigger_calculate_load
+BEFORE INSERT OR UPDATE ON public.training_logs
+FOR EACH ROW EXECUTE FUNCTION calculate_load();
+
+-- Handle New User (Profile Creation)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, email, name, role, coach_id, birth_date)
+  INSERT INTO public.profiles (id, email, full_name, role, avatar_url)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'name', 'Usuário'),
+    NEW.raw_user_meta_data->>'full_name',
     COALESCE(NEW.raw_user_meta_data->>'role', 'athlete'),
-    CASE 
-      WHEN NEW.raw_user_meta_data->>'coach_id' IS NOT NULL 
-      AND NEW.raw_user_meta_data->>'coach_id' != '' 
-      THEN (NEW.raw_user_meta_data->>'coach_id')::uuid
-      ELSE NULL
-    END,
-    CASE 
-      WHEN NEW.raw_user_meta_data->>'birth_date' IS NOT NULL 
-      AND NEW.raw_user_meta_data->>'birth_date' != '' 
-      THEN (NEW.raw_user_meta_data->>'birth_date')::date
-      ELSE NULL
-    END
+    NEW.raw_user_meta_data->>'avatar_url'
   );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- =====================================================
--- 6. TRIGGERS
--- =====================================================
-
--- Trigger for new user creation
+-- Trigger for auth.users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- Trigger for readiness score calculation
-DROP TRIGGER IF EXISTS calculate_readiness_score_trigger ON daily_data;
-CREATE TRIGGER calculate_readiness_score_trigger
-  BEFORE INSERT OR UPDATE ON daily_data
-  FOR EACH ROW EXECUTE FUNCTION calculate_readiness_score();
-
--- Trigger for TSS calculation
-DROP TRIGGER IF EXISTS calculate_tss_trigger ON training_sessions;
-CREATE TRIGGER calculate_tss_trigger
-  BEFORE INSERT OR UPDATE ON training_sessions
-  FOR EACH ROW EXECUTE FUNCTION calculate_tss();
-
--- Triggers for updated_at
-DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_daily_data_updated_at ON daily_data;
-CREATE TRIGGER update_daily_data_updated_at
-  BEFORE UPDATE ON daily_data
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_training_sessions_updated_at ON training_sessions;
-CREATE TRIGGER update_training_sessions_updated_at
-  BEFORE UPDATE ON training_sessions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- =====================================================
--- 7. VIEWS (Optional - for analytics)
--- =====================================================
-
--- View for athlete dashboard summary
-CREATE OR REPLACE VIEW athlete_summary AS
-SELECT 
-  u.id,
-  u.name,
-  u.email,
-  COUNT(DISTINCT dd.id) as total_daily_entries,
-  COUNT(DISTINCT ts.id) as total_training_sessions,
-  AVG(dd.readiness_score) as avg_readiness,
-  SUM(ts.tss) as total_tss_7days
-FROM users u
-LEFT JOIN daily_data dd ON u.id = dd.user_id AND dd.date >= CURRENT_DATE - INTERVAL '7 days'
-LEFT JOIN training_sessions ts ON u.id = ts.user_id AND ts.date >= CURRENT_DATE - INTERVAL '7 days'
-WHERE u.role = 'athlete'
-GROUP BY u.id, u.name, u.email;
-
--- =====================================================
--- NOTES
--- =====================================================
--- Este schema é a versão definitiva e otimizada
--- Inclui:
--- 1. Tabelas corretamente estruturadas
--- 2. Índices para performance
--- 3. RLS policies para segurança
--- 4. Triggers para cálculos automáticos
--- 5. Functions auxiliares
--- 6. Views para analytics
---
--- Para aplicar:
--- 1. Execute este script no Supabase SQL Editor
--- 2. Verifique se não há erros
--- 3. Teste com dados de exemplo
--- =====================================================
