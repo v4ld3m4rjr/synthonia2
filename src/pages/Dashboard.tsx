@@ -102,7 +102,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="p-6 bg-card rounded-xl border border-border shadow-sm">
                     <h3 className="text-lg font-semibold mb-6">Tendência de Readiness</h3>
-                    <div className="h-[300px] w-full">
+                    <div style={{ width: '100%', height: 300 }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={assessments}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

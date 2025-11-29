@@ -11,6 +11,7 @@ const authSchema = z.object({
     email: z.string().email('Email inválido'),
     password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
     fullName: z.string().optional(),
+    role: z.enum(['athlete', 'coach', 'physiotherapist']).optional(),
 });
 
 type AuthFormData = z.infer<typeof authSchema>;
@@ -23,6 +24,9 @@ export function AuthForm() {
 
     const { register, handleSubmit, formState: { errors } } = useForm<AuthFormData>({
         resolver: zodResolver(authSchema),
+        defaultValues: {
+            role: 'athlete'
+        }
     });
 
     const onSubmit = async (data: AuthFormData) => {
@@ -44,12 +48,11 @@ export function AuthForm() {
                     options: {
                         data: {
                             full_name: data.fullName,
-                            role: 'athlete', // Default role
+                            role: data.role || 'athlete',
                         },
                     },
                 });
                 if (error) throw error;
-                // Check if email confirmation is required
                 alert('Cadastro realizado! Verifique seu email se necessário.');
                 setIsLogin(true);
             }
@@ -73,19 +76,35 @@ export function AuthForm() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {!isLogin && (
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Nome Completo
-                        </label>
-                        <Input
-                            {...register('fullName')}
-                            placeholder="Seu nome"
-                            className={errors.fullName ? 'border-destructive' : ''}
-                        />
-                        {errors.fullName && (
-                            <p className="text-sm text-destructive">{errors.fullName.message}</p>
-                        )}
-                    </div>
+                    <>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Nome Completo
+                            </label>
+                            <Input
+                                {...register('fullName')}
+                                placeholder="Seu nome"
+                                className={errors.fullName ? 'border-destructive' : ''}
+                            />
+                            {errors.fullName && (
+                                <p className="text-sm text-destructive">{errors.fullName.message}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Tipo de Conta
+                            </label>
+                            <select
+                                {...register('role')}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="athlete">Atleta</option>
+                                <option value="coach">Treinador</option>
+                                <option value="physiotherapist">Fisioterapeuta</option>
+                            </select>
+                        </div>
+                    </>
                 )}
 
                 <div className="space-y-2">

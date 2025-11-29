@@ -41,11 +41,11 @@ export function DailyAssessment() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('User not authenticated');
 
-            const { error } = await supabase.from('daily_assessments').insert({
+            const { error } = await supabase.from('daily_assessments').upsert({
                 athlete_id: user.id,
                 date: new Date().toISOString().split('T')[0],
                 ...data
-            });
+            }, { onConflict: 'athlete_id,date' });
 
             if (error) throw error;
             navigate('/dashboard');
