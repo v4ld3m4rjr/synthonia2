@@ -1,5 +1,3 @@
-import { TrainingSession, DailyMetricsMental, Profile } from '../types';
-
 // ==========================================
 // 1. CÁLCULOS FÍSICOS (WORKLOAD)
 // ==========================================

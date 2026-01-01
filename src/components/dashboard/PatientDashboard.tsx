@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { DailyMetricsMental, DailyMetricsPhysical, Profile } from '../../types';
+import type { DailyMetricsMental, DailyMetricsPhysical, Profile } from '../../types';
 import { checkManiaRisk, checkSuicideRisk } from '../../utils/calculations';
-import { Card } from '../ui/Card'; // Vou precisar criar/recriar o Card se não existir
+import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 
@@ -42,7 +42,6 @@ export function PatientDashboard({ userProfile }: { userProfile: Profile }) {
 
       if (physData) setPhysicalMetrics(physData);
       if (mentalData) setMentalMetrics(mentalData);
-      setLoading(false);
     };
 
     fetchTodayMetrics();
@@ -91,7 +90,7 @@ export function PatientDashboard({ userProfile }: { userProfile: Profile }) {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Humor</span>
-              <span className="font-medium">{mentalMetrics?.mood_general ?? '-'}</span>
+              <span className="font-medium">{physicalMetrics?.mood_general ?? '-'}</span>
             </div>
             <div className="flex justify-between">
               <span>Ansiedade</span>

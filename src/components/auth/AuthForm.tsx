@@ -6,7 +6,6 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useNavigate } from 'react-router-dom';
-import { UserRole } from '../../types';
 
 const authSchema = z.object({
     email: z.string().email('Email inválido'),
@@ -37,7 +36,7 @@ export function AuthForm() {
     useEffect(() => {
         if (!isLogin && selectedRole === 'patient') {
             const fetchDoctors = async () => {
-                const { data, error } = await supabase
+                const { data } = await supabase
                     .from('profiles')
                     .select('id, full_name')
                     .eq('role', 'doctor');

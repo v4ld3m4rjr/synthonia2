@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Calendar, Moon, Zap, Heart, Brain, Activity, Save } from 'lucide-react';
+import { Calendar, Moon, Zap, Brain, Activity, Save } from 'lucide-react';
 
 interface DailyAssessmentProps {
   user: { id: string };
@@ -45,12 +45,6 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     // Training (Legacy checkbox)
     trained: false,
   });
-
-  // ... (manter descriptors e SliderField - vou simplificar aqui para caber no contexto)
-  const descriptors = {
-    energy_level: { 0: 'Exaustão', 5: 'Normal', 10: 'Mania' },
-    // ... outros descritores
-  };
 
   const steps = [
     {
@@ -234,7 +228,7 @@ const SliderField: React.FC<{
   leftLabel: string;
   rightLabel: string;
   color: string;
-}> = ({ label, value, onChange, leftLabel, rightLabel, color }) => {
+}> = ({ label, value, onChange, leftLabel, rightLabel }) => {
   return (
     <div className="space-y-2">
       <div className="flex justify-between">

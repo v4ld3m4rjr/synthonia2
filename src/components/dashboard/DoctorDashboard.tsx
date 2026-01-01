@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Profile } from '../../types';
+import type { Profile } from '../../types';
 import { Button } from '../ui/Button';
 
 // Interface para lista de pacientes com dados de risco agregados

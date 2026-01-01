@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Plus, Trash, Save, Dumbbell } from 'lucide-react';
-import { Exercise } from '../../types';
+import type { Exercise } from '../../types';
 
 export function TrainingForm() {
     const [loading, setLoading] = useState(false);

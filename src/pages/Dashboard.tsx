@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PatientDashboard } from '../components/dashboard/PatientDashboard';
 import { DoctorDashboard } from '../components/dashboard/DoctorDashboard';
-import { Profile } from '../types';
+import type { Profile } from '../types';
 import { Button } from '../components/ui/Button';
 
 export default function Dashboard() {
