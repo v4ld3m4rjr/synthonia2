@@ -1,8 +1,7 @@
 // [AI Generated] Data: 19/01/2025
-// Descrição: Formulário de avaliação diária completo
-// Gerado por: Cursor AI
+// Descrição: Formulário de avaliação diária completo (Atualizado para SPRAVATTO)
+// Gerado por: Trae AI
 // Versão: React 18.3.1
-// AI_GENERATED_CODE_START
 import React, { useState } from 'react';
 import { User, DailyData } from '../../types';
 import { dbHelpers } from '../../lib/supabase';
@@ -25,6 +24,25 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     sleep_quality: 5,
     sleep_duration: '',
     sleep_regularity: 5,
+    sleep_score: '', // 0-100
+    stress_score: '', // 0-100
+    
+    // Bipolaridade
+    energy_level: 5,
+    mood_depressed: 0,
+    mood_euphoria: 0,
+    irritability: 0,
+
+    // Neurodivergência
+    anxiety: 0,
+    obsessive_thoughts: 0,
+    sensory_overload: 0,
+    social_masking: 0,
+    
+    // Segurança
+    suicide_risk: 0,
+
+    // Legado / Físico
     fatigue_level: 5,
     exhaustion: 5,
     mood: 5,
@@ -46,6 +64,56 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
     // Novo campo
     pse: 5 // Percepção Subjetiva de Esforço (0-10)
   });
+
+  const descriptors = {
+    energy_level: {
+      0: 'Exaustão, corpo pesado ("chumbo"), fadiga crônica',
+      5: 'Energia normal, sustentável ao longo do dia',
+      8: '"Elétrico", produtivo demais, inquieto',
+      10: 'Mania. Pensamento voando, agitação perigosa'
+    },
+    mood_depressed: {
+      0: 'Bem/Estável',
+      5: 'Desânimo, "vida cinza", perda de prazer leve',
+      10: 'Dor emocional insuportável, choro incontrolável ou paralisia'
+    },
+    mood_euphoria: {
+      0: 'Calmo',
+      5: 'Mais feliz que o normal, muito otimista',
+      10: 'Sensação de ser invencível, Deus ou grandiosidade delirante'
+    },
+    irritability: {
+      0: 'Paciência total',
+      5: 'Pavio curto, respostas ríspidas',
+      10: 'Explosivo, vontade de quebrar coisas ou agredir'
+    },
+    anxiety: {
+      0: 'Relaxado',
+      5: 'Tensão muscular, preocupação de fundo constante',
+      10: 'Ataque de Pânico'
+    },
+    obsessive_thoughts: {
+      0: 'Mente limpa',
+      5: 'O pensamento vem e incomoda, mas consigo mudar o foco',
+      10: 'O pensamento grita na cabeça o dia todo, impossível ignorar'
+    },
+    sensory_overload: {
+      0: 'Confortável',
+      5: 'Luzes ou sons irritam, preciso usar fone ou óculos',
+      10: 'Meltdown/Shutdown (Dor física com barulho, cérebro "desliga")'
+    },
+    social_masking: {
+      0: 'Fui eu mesmo 100%',
+      5: '"Atuação" social padrão de trabalho',
+      10: 'Exaustão por fingir ser normal. Sinto-me uma farsa'
+    },
+    suicide_risk: {
+      0: 'Nenhum',
+      3: 'Passivo ("Queria dormir e não acordar")',
+      7: 'Ativo (Planejamento)',
+      10: 'Iminência/Emergência'
+    }
+  };
 
   // Fallback local quando Supabase não tem tabelas configuradas
   const saveLocalDailyData = (entry: Partial<DailyData>) => {
@@ -74,29 +142,29 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
 
   const steps = [
     {
-      title: 'Como você dormiu?',
+      title: 'Biológico & Sinais Vitais',
       icon: <Moon className="h-6 w-6 text-indigo-600" />,
-      fields: ['sleep_quality', 'sleep_duration', 'sleep_regularity']
+      fields: ['sleep_duration', 'sleep_score', 'stress_score', 'resting_hr']
     },
     {
-      title: 'Como está se sentindo?',
+      title: 'Bipolaridade (Energia & Humor)',
       icon: <Brain className="h-6 w-6 text-purple-600" />,
-      fields: ['fatigue_level', 'exhaustion', 'mood', 'stress_level']
+      fields: ['energy_level', 'mood_depressed', 'mood_euphoria', 'irritability']
     },
     {
-      title: 'Estado físico atual',
-      icon: <Zap className="h-6 w-6 text-yellow-600" />,
-      fields: ['muscle_soreness', 'tqr']
+      title: 'Neurodivergência (TOC & Autismo)',
+      icon: <Activity className="h-6 w-6 text-yellow-600" />,
+      fields: ['anxiety', 'obsessive_thoughts', 'sensory_overload', 'social_masking']
     },
     {
-      title: 'Dados objetivos (opcional)',
+      title: 'Segurança',
       icon: <Heart className="h-6 w-6 text-red-600" />,
-      fields: ['resting_hr']
+      fields: ['suicide_risk']
     },
     {
-      title: 'Treino do dia anterior',
-      icon: <Activity className="h-6 w-6 text-green-600" />,
-      fields: ['training_duration', 'training_rpe', 'training_intensity', 'training_type', 'training_notes']
+      title: 'Físico & Treino',
+      icon: <Zap className="h-6 w-6 text-green-600" />,
+      fields: ['muscle_soreness', 'tqr', 'trained']
     }
   ];
 
@@ -137,24 +205,50 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
         tss = calculateTSS(parseInt(formData.training_duration), formData.training_rpe);
       }
 
-      const dailyDataEntry: Partial<DailyData> = {
+      // Map new 0-100/0-10 scales to legacy 1-10 scales for DB compatibility
+      const legacySleepQuality = formData.sleep_score ? Math.max(1, Math.round(parseInt(formData.sleep_score as string) / 10)) : 5;
+      const legacyStressLevel = formData.stress_score ? Math.max(1, Math.round(parseInt(formData.stress_score as string) / 10)) : 5;
+      const legacyFatigue = Math.max(1, 10 - formData.energy_level);
+      const legacyMood = Math.max(1, 10 - formData.mood_depressed); // Simple approx
+
+      const dailyDataEntry: any = { // Using any to bypass strict type checking for new fields until types are fully propagated
         user_id: user.id,
         date: today,
-        sleep_quality: formData.sleep_quality,
-        sleep_duration: formData.sleep_duration ? parseFloat(formData.sleep_duration) : 8,
-        sleep_regularity: formData.sleep_regularity,
-        fatigue_level: formData.fatigue_level,
-        exhaustion: formData.exhaustion,
-        mood: formData.mood,
+        // Legacy required fields
+        sleep_quality: legacySleepQuality,
+        fatigue_level: legacyFatigue,
+        exhaustion: formData.exhaustion, // Kept for legacy compatibility if needed
+        mood: legacyMood,
         muscle_soreness: formData.muscle_soreness,
-        stress_level: formData.stress_level,
+        stress_level: legacyStressLevel,
         tqr: formData.tqr,
         psr: formData.psr,
+        readiness_score: 0, // Calculated by trigger
+        
+        // New Mental Health Fields
+        sleep_duration: formData.sleep_duration ? parseFloat(formData.sleep_duration) : null,
+        sleep_regularity: formData.sleep_regularity,
+        sleep_score: formData.sleep_score ? parseInt(formData.sleep_score as string) : null,
+        stress_score: formData.stress_score ? parseInt(formData.stress_score as string) : null,
         resting_hr: formData.resting_hr ? parseInt(formData.resting_hr) : null,
+        
+        energy_level: formData.energy_level,
+        mood_depressed: formData.mood_depressed,
+        mood_euphoria: formData.mood_euphoria,
+        irritability: formData.irritability,
+        
+        anxiety: formData.anxiety,
+        obsessive_thoughts: formData.obsessive_thoughts,
+        sensory_overload: formData.sensory_overload,
+        social_masking: formData.social_masking,
+        
+        suicide_risk: formData.suicide_risk,
+
+        // Training Context
         rpe: formData.training_rpe,
         training_duration: formData.training_duration ? parseInt(formData.training_duration) : null,
         training_intensity: formData.training_intensity,
-        readiness_score: 0,
+        
         created_at: new Date().toISOString()
       };
 
@@ -258,33 +352,12 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
         </CardHeader>
 
         <CardContent className="p-8">
-          {/* Step 0: Sleep Quality */}
+          {/* Step 0: Biological & Vitals */}
           {currentStep === 0 && (
             <div className="space-y-8">
-              <SliderField
-                label="Qualidade do sono (1-10)"
-                value={formData.sleep_quality}
-                onChange={(value) => handleSliderChange('sleep_quality', value)}
-                leftLabel="Péssima"
-                rightLabel="Excelente"
-                color="indigo"
-                valueDescriptions={{
-                  1: "Não consegui dormir, insônia total",
-                  2: "Sono muito fragmentado, acordei várias vezes",
-                  3: "Sono ruim, demorei para adormecer",
-                  4: "Sono irregular, acordei algumas vezes",
-                  5: "Sono médio, nem bom nem ruim",
-                  6: "Sono razoável, pequenos despertares",
-                  7: "Sono bom, acordei descansado",
-                  8: "Sono muito bom, profundo e reparador",
-                  9: "Sono excelente, acordei revigorado",
-                  10: "Sono perfeito, melhor noite possível"
-                }}
-              />
-              
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Duração do sono (horas)
+                  Sono (Horas)
                 </label>
                 <input
                   type="number"
@@ -294,184 +367,46 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
                   onChange={(e) => handleInputChange('sleep_duration', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
+                <p className="text-xs text-gray-500 mt-1">Copiar do App/Relógio</p>
               </div>
-              
-              <SliderField
-                label="Regularidade do sono (1-10)"
-                value={formData.sleep_regularity}
-                onChange={(value) => handleSliderChange('sleep_regularity', value)}
-                leftLabel="Muito irregular"
-                rightLabel="Muito regular"
-                color="indigo"
-                valueDescriptions={{
-                  1: "Horários completamente desregulados",
-                  2: "Muito irregular, sem padrão",
-                  3: "Bastante irregular, varia muito",
-                  4: "Irregular, algumas variações",
-                  5: "Moderadamente regular",
-                  6: "Razoavelmente regular",
-                  7: "Bem regular, pequenas variações",
-                  8: "Muito regular, horários consistentes",
-                  9: "Extremamente regular, rotina fixa",
-                  10: "Perfeitamente regular, mesmo horário sempre"
-                }}
-              />
-            </div>
-          )}
 
-          {/* Step 1: Mood & Energy */}
-          {currentStep === 1 && (
-            <div className="space-y-8">
-              <SliderField
-                label="Nível de fadiga (1-10)"
-                value={formData.fatigue_level}
-                onChange={(value) => handleSliderChange('fatigue_level', value)}
-                leftLabel="Muito cansado"
-                rightLabel="Muito disposto"
-                color="purple"
-                valueDescriptions={{
-                  1: "Extremamente cansado, sem energia",
-                  2: "Muito cansado, dificuldade para atividades",
-                  3: "Bastante cansado, energia baixa",
-                  4: "Cansado, mas consigo fazer atividades",
-                  5: "Energia moderada, nem cansado nem disposto",
-                  6: "Razoavelmente disposto",
-                  7: "Bem disposto, boa energia",
-                  8: "Muito disposto, energia alta",
-                  9: "Extremamente disposto, muita energia",
-                  10: "Energia máxima, completamente revigorado"
-                }}
-              />
-              
-              <SliderField
-                label="Nível de exaustão (1-10)"
-                value={formData.exhaustion}
-                onChange={(value) => handleSliderChange('exhaustion', value)}
-                leftLabel="Sem exaustão"
-                rightLabel="Completamente exausto"
-                color="red"
-                valueDescriptions={{
-                  1: "Totalmente recuperado, sem exaustão",
-                  2: "Muito pouca exaustão",
-                  3: "Leve sensação de exaustão",
-                  4: "Alguma exaustão, mas controlável",
-                  5: "Exaustão moderada",
-                  6: "Bastante exausto",
-                  7: "Muito exausto, preciso descansar",
-                  8: "Extremamente exausto",
-                  9: "Quase no limite da exaustão",
-                  10: "Completamente exausto, não consigo mais"
-                }}
-              />
-              
-              <SliderField
-                label="Humor geral (1-10)"
-                value={formData.mood}
-                onChange={(value) => handleSliderChange('mood', value)}
-                leftLabel="Péssimo"
-                rightLabel="Excelente"
-                color="blue"
-                valueDescriptions={{
-                  1: "Muito deprimido, humor péssimo",
-                  2: "Bastante triste, humor ruim",
-                  3: "Humor baixo, desanimado",
-                  4: "Humor um pouco baixo",
-                  5: "Humor neutro, nem bom nem ruim",
-                  6: "Humor razoável, ligeiramente positivo",
-                  7: "Bom humor, me sinto bem",
-                  8: "Muito bom humor, otimista",
-                  9: "Humor excelente, muito feliz",
-                  10: "Humor perfeito, eufórico e motivado"
-                }}
-              />
-              
-              <SliderField
-                label="Nível de estresse (1-10)"
-                value={formData.stress_level}
-                onChange={(value) => handleSliderChange('stress_level', value)}
-                leftLabel="Muito estressado"
-                rightLabel="Muito relaxado"
-                color="green"
-                valueDescriptions={{
-                  1: "Extremamente estressado, ansioso",
-                  2: "Muito estressado, difícil relaxar",
-                  3: "Bastante estressado, tenso",
-                  4: "Estressado, mas controlável",
-                  5: "Estresse moderado, nem relaxado nem tenso",
-                  6: "Razoavelmente relaxado",
-                  7: "Bem relaxado, calmo",
-                  8: "Muito relaxado, tranquilo",
-                  9: "Extremamente relaxado, zen",
-                  10: "Completamente relaxado, paz total"
-                }}
-              />
-            </div>
-          )}
-
-          {/* Step 2: Physical State */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <SliderField
-                label="Dor muscular (1-10)"
-                value={formData.muscle_soreness}
-                onChange={(value) => handleSliderChange('muscle_soreness', value)}
-                leftLabel="Muita dor"
-                rightLabel="Sem dor"
-                color="yellow"
-                valueDescriptions={{
-                  1: "Dor intensa, dificulta movimentos",
-                  2: "Dor forte, desconforto significativo",
-                  3: "Dor moderada a forte",
-                  4: "Dor moderada, mas suportável",
-                  5: "Dor leve a moderada",
-                  6: "Dor leve, pouco desconforto",
-                  7: "Dor muito leve, quase imperceptível",
-                  8: "Desconforto mínimo",
-                  9: "Praticamente sem dor",
-                  10: "Totalmente sem dor, músculos relaxados"
-                }}
-              />
-              
-              <SliderField
-                label="TQR - Qualidade Total de Recuperação (0-10)"
-                value={formData.tqr}
-                onChange={(value) => handleSliderChange('tqr', value)}
-                leftLabel="Não recuperado"
-                rightLabel="Totalmente recuperado"
-                color="blue"
-                valueDescriptions={{
-                  0: "Nada recuperado, exaustão total",
-                  1: "Muito pouco recuperado, extremamente cansado",
-                  2: "Pouco recuperado, muito cansado",
-                  3: "Recuperação insuficiente, cansado",
-                  4: "Recuperação parcial, ainda cansado",
-                  5: "Recuperação moderada, energia média",
-                  6: "Razoavelmente recuperado, energia adequada",
-                  7: "Bem recuperado, boa energia",
-                  8: "Muito bem recuperado, energia alta",
-                  9: "Quase totalmente recuperado, energia excelente",
-                  10: "Totalmente recuperado, energia máxima"
-                }}
-              />
-              
-              {/* PSR */}
-              <SliderField
-                label="PSR - Estresse/Recuperação percebida (0-10)"
-                value={formData.psr}
-                onChange={(value) => handleSliderChange('psr', value)}
-                leftLabel="Muito estressado"
-                rightLabel="Totalmente recuperado"
-                color="blue"
-              />
-            </div>
-          )}
-
-          {/* Step 3: Objective Data */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Frequência cardíaca de repouso (bpm)
+                  Sono (Nota) - 0 a 100
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Ex: 85"
+                  value={formData.sleep_score}
+                  onChange={(e) => handleInputChange('sleep_score', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">Nota do App (0 a 100)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Stress (App) - 0 a 100
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Ex: 40"
+                  value={formData.stress_score}
+                  onChange={(e) => handleInputChange('stress_score', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                />
+                {parseInt(formData.stress_score as string) > 80 && (
+                  <p className="text-sm text-red-400 mt-1 font-bold">⚠️ Alerta: Stress Elevado!</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  FC Repouso (bpm)
                 </label>
                 <input
                   type="number"
@@ -480,86 +415,210 @@ const DailyAssessment: React.FC<DailyAssessmentProps> = ({ user, onComplete }) =
                   onChange={(e) => handleInputChange('resting_hr', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 />
-              </div>
-              
-              <div className="bg-blue-900/20 border border-blue-600 rounded-lg p-4">
-                <p className="text-sm text-blue-300">
-                  💡 <strong>Dica:</strong> Este dado pode ser obtido de dispositivos como relógios inteligentes ou monitores cardíacos. Se não tiver, deixe em branco.
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Batimentos ao acordar (Do App)</p>
               </div>
             </div>
           )}
 
-          {/* Step 4: Training */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <input
-                  type="checkbox"
-                  id="trained"
-                  checked={formData.trained}
-                  onChange={(e) => handleInputChange('trained', e.target.checked)}
-                  className="w-5 h-5 text-orange-600 border-gray-500 bg-gray-700 rounded focus:ring-orange-500"
-                />
-                <label htmlFor="trained" className="text-lg font-medium text-white">
-                  Treinei hoje
-                </label>
-              </div>
+          {/* Step 1: Bipolarity */}
+          {currentStep === 1 && (
+            <div className="space-y-8">
+              <SliderField
+                label="Energia (0-10)"
+                value={formData.energy_level}
+                onChange={(value) => handleSliderChange('energy_level', value)}
+                leftLabel="Exaustão"
+                rightLabel="Mania"
+                color="yellow"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.energy_level}
+              />
               
-              {formData.trained && (
-                <div className="space-y-6 pl-8 border-l-4 border-orange-600">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Duração do treino (minutos)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 60"
-                      value={formData.training_duration}
-                      onChange={(e) => handleInputChange('training_duration', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-                  
-                  <SliderField
-                    label="Intensidade do treino (1-10)"
-                    value={formData.training_intensity}
-                    onChange={(value) => handleSliderChange('training_intensity', value)}
-                    leftLabel="Muito leve"
-                    rightLabel="Máxima"
-                    color="orange"
-                  />
-                  
-                  <SliderField
-                    label="RPE - Percepção de esforço (1-10)"
-                    value={formData.training_rpe}
-                    onChange={(value) => handleSliderChange('training_rpe', value)}
-                    leftLabel="Muito fácil"
-                    rightLabel="Máximo esforço"
-                    color="orange"
-                    min={1}
-                    max={10}
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Tipo de treino
-                    </label>
-                    <select
-                      value={formData.training_type}
-                      onChange={(e) => handleInputChange('training_type', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    >
-                      <option value="">Selecione o tipo</option>
-                      <option value="cardio">Cardio</option>
-                      <option value="strength">Força</option>
-                      <option value="flexibility">Flexibilidade</option>
-                      <option value="sports">Esportes</option>
-                      <option value="mixed">Misto</option>
-                    </select>
-                  </div>
+              {/* Mania Risk Alert */}
+              {parseInt(formData.stress_score as string) > 80 && formData.energy_level >= 8 && (
+                 <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-4 animate-pulse">
+                  <p className="text-red-200 text-sm font-bold flex items-center justify-center">
+                    <Activity className="h-5 w-5 mr-2" />
+                    ⚠️ ALERTA: Alto Stress + Alta Energia = Risco de Mania!
+                  </p>
                 </div>
               )}
+              
+              <SliderField
+                label="Humor Depre (0-10)"
+                value={formData.mood_depressed}
+                onChange={(value) => handleSliderChange('mood_depressed', value)}
+                leftLabel="Bem"
+                rightLabel="Dor Emocional"
+                color="blue"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.mood_depressed}
+              />
+
+              <SliderField
+                label="Euforia/Mania (0-10)"
+                value={formData.mood_euphoria}
+                onChange={(value) => handleSliderChange('mood_euphoria', value)}
+                leftLabel="Calmo"
+                rightLabel="Grandiosidade"
+                color="orange"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.mood_euphoria}
+              />
+
+              <SliderField
+                label="Irritabilidade (0-10)"
+                value={formData.irritability}
+                onChange={(value) => handleSliderChange('irritability', value)}
+                leftLabel="Paciência"
+                rightLabel="Explosivo"
+                color="red"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.irritability}
+              />
+            </div>
+          )}
+
+          {/* Step 2: Neurodivergence */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <SliderField
+                label="Ansiedade (0-10)"
+                value={formData.anxiety}
+                onChange={(value) => handleSliderChange('anxiety', value)}
+                leftLabel="Relaxado"
+                rightLabel="Pânico"
+                color="purple"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.anxiety}
+              />
+
+              <SliderField
+                label="Pensamentos Obsessivos - TOC (0-10)"
+                value={formData.obsessive_thoughts}
+                onChange={(value) => handleSliderChange('obsessive_thoughts', value)}
+                leftLabel="Mente limpa"
+                rightLabel="Gritante"
+                color="indigo"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.obsessive_thoughts}
+              />
+
+              <SliderField
+                label="Sobrecarga Sensorial - Autismo (0-10)"
+                value={formData.sensory_overload}
+                onChange={(value) => handleSliderChange('sensory_overload', value)}
+                leftLabel="Confortável"
+                rightLabel="Meltdown"
+                color="yellow"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.sensory_overload}
+              />
+
+              <SliderField
+                label="Masking Social - Autismo (0-10)"
+                value={formData.social_masking}
+                onChange={(value) => handleSliderChange('social_masking', value)}
+                leftLabel="Autêntico"
+                rightLabel="Exaustão"
+                color="green"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.social_masking}
+              />
+            </div>
+          )}
+
+          {/* Step 3: Safety */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-4">
+                <p className="text-red-200 text-sm font-bold text-center">
+                  ⚠️ Se você estiver em perigo imediato, ligue para 188 (CVV) ou procure ajuda profissional.
+                </p>
+              </div>
+              <SliderField
+                label="Risco Suicídio (0-10)"
+                value={formData.suicide_risk}
+                onChange={(value) => handleSliderChange('suicide_risk', value)}
+                leftLabel="Nenhum"
+                rightLabel="Emergência"
+                color="red"
+                min={0}
+                max={10}
+                valueDescriptions={descriptors.suicide_risk}
+              />
+            </div>
+          )}
+
+          {/* Step 4: Physical & Training (Legacy) */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <SliderField
+                label="Dor muscular (1-10)"
+                value={formData.muscle_soreness}
+                onChange={(value) => handleSliderChange('muscle_soreness', value)}
+                leftLabel="Muita dor"
+                rightLabel="Sem dor"
+                color="yellow"
+              />
+              
+              <SliderField
+                label="TQR - Recuperação (0-10)"
+                value={formData.tqr}
+                onChange={(value) => handleSliderChange('tqr', value)}
+                leftLabel="Exaustão"
+                rightLabel="Recuperado"
+                color="blue"
+              />
+
+              <div className="border-t border-gray-700 pt-6">
+                 <div className="flex items-center space-x-3 mb-4">
+                  <input
+                    type="checkbox"
+                    id="trained"
+                    checked={formData.trained}
+                    onChange={(e) => handleInputChange('trained', e.target.checked)}
+                    className="w-5 h-5 text-orange-600 border-gray-500 bg-gray-700 rounded focus:ring-orange-500"
+                  />
+                  <label htmlFor="trained" className="text-lg font-medium text-white">
+                    Treinei hoje
+                  </label>
+                </div>
+                
+                {formData.trained && (
+                  <div className="space-y-6 pl-8 border-l-4 border-orange-600">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Duração (minutos)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 60"
+                        value={formData.training_duration}
+                        onChange={(e) => handleInputChange('training_duration', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    
+                    <SliderField
+                      label="RPE - Esforço (1-10)"
+                      value={formData.training_rpe}
+                      onChange={(value) => handleSliderChange('training_rpe', value)}
+                      leftLabel="Fácil"
+                      rightLabel="Máximo"
+                      color="orange"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -637,7 +696,7 @@ const SliderField: React.FC<{
         <div className="text-right">
           <span className="text-3xl font-bold text-white">{value}</span>
           {getCurrentDescription() && (
-            <div className="text-sm text-gray-300 mt-1 max-w-xs">
+            <div className="text-sm text-gray-300 mt-1 max-w-xs text-right">
               {getCurrentDescription()}
             </div>
           )}

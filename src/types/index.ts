@@ -34,6 +34,32 @@ export interface DailyData {
   rpe?: number; // Rating of Perceived Exertion (1-10)
   training_duration?: number; // minutos
   training_intensity?: number; // 1-10
+  
+  // New Mental Health Fields
+  sleep_score?: number; // 0-100 (Sleep Nota)
+  stress_score?: number; // 0-100 (Stress App)
+  energy_level?: number; // 0-10
+  mood_depressed?: number; // 0-10
+  mood_euphoria?: number; // 0-10
+  irritability?: number; // 0-10
+  anxiety?: number; // 0-10
+  obsessive_thoughts?: number; // 0-10
+  sensory_overload?: number; // 0-10
+  social_masking?: number; // 0-10
+  suicide_risk?: number; // 0-10
+  
+  created_at: string;
+}
+
+export type ClinicalAssessmentType = 'PHQ-9' | 'GAD-7' | 'ASRM' | 'FAST' | 'Y-BOCS' | 'CAT-Q' | 'RAADS-R';
+
+export interface ClinicalAssessment {
+  id: string;
+  user_id: string;
+  date: string;
+  type: ClinicalAssessmentType;
+  total_score: number;
+  answers: Record<string, any>;
   created_at: string;
 }
 
