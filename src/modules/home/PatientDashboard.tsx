@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { DailyMetricsMental, DailyMetricsPhysical, Profile } from '../../types';
 import { checkManiaRisk, checkSuicideRisk } from '../../utils/calculations';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Button } from '../../components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
 // Componente simples de Card para garantir que não quebre se o ui/Card não existir
@@ -17,7 +17,6 @@ const SimpleCard = ({ title, children, className = '' }: { title: string, childr
 export function PatientDashboard({ userProfile }: { userProfile: Profile }) {
   const [physicalMetrics, setPhysicalMetrics] = useState<DailyMetricsPhysical | null>(null);
   const [mentalMetrics, setMentalMetrics] = useState<DailyMetricsMental | null>(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { PatientDashboard } from '../components/dashboard/PatientDashboard';
-import { DoctorDashboard } from '../components/dashboard/DoctorDashboard';
+import { PatientDashboard } from '../modules/home/PatientDashboard';
+import { DoctorDashboard } from '../components/dashboard/DoctorDashboard'; // Keep doctor dashboard here or refactor later
 import type { Profile } from '../types';
 import { Button } from '../components/ui/Button';
 

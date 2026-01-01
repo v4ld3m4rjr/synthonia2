@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Button } from '../ui/Button';
-import { Card, CardContent, CardHeader } from '../ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent, CardHeader } from '../../components/ui/Card';
 import { Save, Syringe } from 'lucide-react';
 
 export function SpravatoForm() {

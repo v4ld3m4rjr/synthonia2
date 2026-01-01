@@ -2,21 +2,23 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. Profiles Table
+-- Updated to support 'subject', 'doctor', 'coach'
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('patient', 'doctor')),
+    role TEXT NOT NULL CHECK (role IN ('subject', 'doctor', 'coach')),
     full_name TEXT,
     birth_date DATE,
     gender TEXT,
     height_cm NUMERIC,
     weight_kg NUMERIC,
-    profile_type TEXT DEFAULT 'Paciente',
-    doctor_id UUID REFERENCES public.profiles(id),
+    profile_type TEXT DEFAULT 'Sujeito',
+    doctor_id UUID REFERENCES public.profiles(id), -- Link to Doctor
+    coach_id UUID REFERENCES public.profiles(id),  -- Link to Coach
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Daily Metrics Physical (Check-in Matinal)
+-- 2. Daily Metrics Physical
 CREATE TABLE public.daily_metrics_physical (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     patient_id UUID REFERENCES public.profiles(id) NOT NULL,
@@ -36,7 +38,7 @@ CREATE TABLE public.daily_metrics_physical (
     UNIQUE(patient_id, date)
 );
 
--- 3. Daily Metrics Mental (Saúde Mental & Neurodivergência)
+-- 3. Daily Metrics Mental
 CREATE TABLE public.daily_metrics_mental (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     patient_id UUID REFERENCES public.profiles(id) NOT NULL,
@@ -70,7 +72,7 @@ CREATE TABLE public.training_sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. Spravato Sessions (Tratamento Esketamina)
+-- 5. Spravato Sessions
 CREATE TABLE public.spravato_sessions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     patient_id UUID REFERENCES public.profiles(id) NOT NULL,
@@ -100,7 +102,6 @@ CREATE TABLE public.clinical_assessments (
 
 -- Row Level Security (RLS) Policies
 
--- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_metrics_physical ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_metrics_mental ENABLE ROW LEVEL SECURITY;
@@ -108,14 +109,14 @@ ALTER TABLE public.training_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.spravato_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clinical_assessments ENABLE ROW LEVEL SECURITY;
 
--- Helper function to check if user is the patient's doctor
-CREATE OR REPLACE FUNCTION is_patients_doctor(patient_uuid UUID)
+-- Helper function: Check if user is the patient's doctor OR coach
+CREATE OR REPLACE FUNCTION is_professional_linked(patient_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = patient_uuid
-    AND doctor_id = auth.uid()
+    AND (doctor_id = auth.uid() OR coach_id = auth.uid())
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -127,108 +128,50 @@ ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update own profile" 
 ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Daily Metrics Physical Policies
-CREATE POLICY "Patients can view own physical metrics"
-ON public.daily_metrics_physical FOR SELECT
-USING (auth.uid() = patient_id);
+-- General Policy Generator for Patient Data Tables
+-- (Simplifying repetitive code for brevity, but listing explicitly for clarity)
 
-CREATE POLICY "Doctors can view their patients physical metrics"
-ON public.daily_metrics_physical FOR SELECT
-USING (is_patients_doctor(patient_id));
+-- Physical Metrics
+CREATE POLICY "Patients view own physical" ON public.daily_metrics_physical FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Pros view linked physical" ON public.daily_metrics_physical FOR SELECT USING (is_professional_linked(patient_id));
+CREATE POLICY "Patients insert own physical" ON public.daily_metrics_physical FOR INSERT WITH CHECK (auth.uid() = patient_id);
+CREATE POLICY "Patients update own physical" ON public.daily_metrics_physical FOR UPDATE USING (auth.uid() = patient_id);
 
-CREATE POLICY "Patients can insert own physical metrics"
-ON public.daily_metrics_physical FOR INSERT
-WITH CHECK (auth.uid() = patient_id);
+-- Mental Metrics
+CREATE POLICY "Patients view own mental" ON public.daily_metrics_mental FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Pros view linked mental" ON public.daily_metrics_mental FOR SELECT USING (is_professional_linked(patient_id));
+CREATE POLICY "Patients insert own mental" ON public.daily_metrics_mental FOR INSERT WITH CHECK (auth.uid() = patient_id);
+CREATE POLICY "Patients update own mental" ON public.daily_metrics_mental FOR UPDATE USING (auth.uid() = patient_id);
 
-CREATE POLICY "Patients can update own physical metrics"
-ON public.daily_metrics_physical FOR UPDATE
-USING (auth.uid() = patient_id);
+-- Training
+CREATE POLICY "Patients view own training" ON public.training_sessions FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Pros view linked training" ON public.training_sessions FOR SELECT USING (is_professional_linked(patient_id));
+CREATE POLICY "Patients insert own training" ON public.training_sessions FOR INSERT WITH CHECK (auth.uid() = patient_id);
+CREATE POLICY "Patients update own training" ON public.training_sessions FOR UPDATE USING (auth.uid() = patient_id);
 
--- Daily Metrics Mental Policies
-CREATE POLICY "Patients can view own mental metrics"
-ON public.daily_metrics_mental FOR SELECT
-USING (auth.uid() = patient_id);
-
-CREATE POLICY "Doctors can view their patients mental metrics"
-ON public.daily_metrics_mental FOR SELECT
-USING (is_patients_doctor(patient_id));
-
-CREATE POLICY "Patients can insert own mental metrics"
-ON public.daily_metrics_mental FOR INSERT
-WITH CHECK (auth.uid() = patient_id);
-
-CREATE POLICY "Patients can update own mental metrics"
-ON public.daily_metrics_mental FOR UPDATE
-USING (auth.uid() = patient_id);
-
--- Training Sessions Policies
-CREATE POLICY "Patients can view own training sessions"
-ON public.training_sessions FOR SELECT
-USING (auth.uid() = patient_id);
-
-CREATE POLICY "Doctors can view their patients training sessions"
-ON public.training_sessions FOR SELECT
-USING (is_patients_doctor(patient_id));
-
-CREATE POLICY "Patients can insert own training sessions"
-ON public.training_sessions FOR INSERT
-WITH CHECK (auth.uid() = patient_id);
-
-CREATE POLICY "Patients can update own training sessions"
-ON public.training_sessions FOR UPDATE
-USING (auth.uid() = patient_id);
-
--- Spravato Sessions Policies
-CREATE POLICY "Patients can view own spravato sessions"
-ON public.spravato_sessions FOR SELECT
-USING (auth.uid() = patient_id);
-
-CREATE POLICY "Doctors can view their patients spravato sessions"
-ON public.spravato_sessions FOR SELECT
-USING (is_patients_doctor(patient_id));
-
-CREATE POLICY "Patients can insert own spravato sessions"
-ON public.spravato_sessions FOR INSERT
-WITH CHECK (auth.uid() = patient_id);
-
-CREATE POLICY "Patients can update own spravato sessions"
-ON public.spravato_sessions FOR UPDATE
-USING (auth.uid() = patient_id);
-
--- Clinical Assessments Policies
-CREATE POLICY "Patients can view own clinical assessments"
-ON public.clinical_assessments FOR SELECT
-USING (auth.uid() = patient_id);
-
-CREATE POLICY "Doctors can view their patients clinical assessments"
-ON public.clinical_assessments FOR SELECT
-USING (is_patients_doctor(patient_id));
-
-CREATE POLICY "Patients can insert own clinical assessments"
-ON public.clinical_assessments FOR INSERT
-WITH CHECK (auth.uid() = patient_id);
-
-CREATE POLICY "Patients can update own clinical assessments"
-ON public.clinical_assessments FOR UPDATE
-USING (auth.uid() = patient_id);
+-- Spravato
+CREATE POLICY "Patients view own spravato" ON public.spravato_sessions FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Pros view linked spravato" ON public.spravato_sessions FOR SELECT USING (is_professional_linked(patient_id));
+CREATE POLICY "Patients insert own spravato" ON public.spravato_sessions FOR INSERT WITH CHECK (auth.uid() = patient_id);
+CREATE POLICY "Patients update own spravato" ON public.spravato_sessions FOR UPDATE USING (auth.uid() = patient_id);
 
 -- Trigger to handle new user creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, role, full_name, doctor_id)
+  INSERT INTO public.profiles (id, email, role, full_name, doctor_id, coach_id)
   VALUES (
     new.id,
     new.email,
-    COALESCE(new.raw_user_meta_data->>'role', 'patient'),
+    COALESCE(new.raw_user_meta_data->>'role', 'subject'), -- Default to subject
     new.raw_user_meta_data->>'full_name',
-    (new.raw_user_meta_data->>'doctor_id')::uuid
+    (new.raw_user_meta_data->>'doctor_id')::uuid,
+    (new.raw_user_meta_data->>'coach_id')::uuid
   );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Recreate trigger (drop first to be safe)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

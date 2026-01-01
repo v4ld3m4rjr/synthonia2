@@ -11,8 +11,9 @@ const authSchema = z.object({
     email: z.string().email('Email inválido'),
     password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
     fullName: z.string().optional(),
-    role: z.enum(['patient', 'doctor']).optional(),
+    role: z.enum(['subject', 'doctor', 'coach']).optional(),
     doctorId: z.string().optional(),
+    coachId: z.string().optional(),
 });
 
 type AuthFormData = z.infer<typeof authSchema>;
@@ -22,30 +23,36 @@ export function AuthForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [doctors, setDoctors] = useState<{ id: string, full_name: string }[]>([]);
+    const [coaches, setCoaches] = useState<{ id: string, full_name: string }[]>([]);
     const navigate = useNavigate();
 
     const { register, handleSubmit, watch, formState: { errors } } = useForm<AuthFormData>({
         resolver: zodResolver(authSchema),
         defaultValues: {
-            role: 'patient'
+            role: 'subject'
         }
     });
 
     const selectedRole = watch('role');
 
     useEffect(() => {
-        if (!isLogin && selectedRole === 'patient') {
-            const fetchDoctors = async () => {
-                const { data } = await supabase
+        if (!isLogin && selectedRole === 'subject') {
+            const fetchPros = async () => {
+                // Fetch Doctors
+                const { data: docs } = await supabase
                     .from('profiles')
                     .select('id, full_name')
                     .eq('role', 'doctor');
-                
-                if (data) {
-                    setDoctors(data);
-                }
+                if (docs) setDoctors(docs);
+
+                // Fetch Coaches
+                const { data: coachesData } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('role', 'coach');
+                if (coachesData) setCoaches(coachesData);
             };
-            fetchDoctors();
+            fetchPros();
         }
     }, [isLogin, selectedRole]);
 
@@ -62,18 +69,15 @@ export function AuthForm() {
                 if (error) throw error;
                 navigate('/dashboard');
             } else {
-                if (data.role === 'patient' && !data.doctorId) {
-                    throw new Error('Por favor, selecione um médico.');
-                }
-
                 const { error } = await supabase.auth.signUp({
                     email: data.email,
                     password: data.password,
                     options: {
                         data: {
                             full_name: data.fullName,
-                            role: data.role || 'patient',
-                            doctor_id: data.role === 'patient' ? data.doctorId : null
+                            role: data.role || 'subject',
+                            doctor_id: data.role === 'subject' ? data.doctorId : null,
+                            coach_id: data.role === 'subject' ? data.coachId : null
                         },
                     },
                 });
@@ -95,7 +99,7 @@ export function AuthForm() {
                     {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta'}
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    {isLogin ? 'Entre para acessar a plataforma' : 'Comece sua jornada de saúde integrativa'}
+                    {isLogin ? 'Entre para acessar a plataforma' : 'Monitoramento Integrativo de Saúde'}
                 </p>
             </div>
 
@@ -103,7 +107,7 @@ export function AuthForm() {
                 {!isLogin && (
                     <>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label className="text-sm font-medium leading-none">
                                 Nome Completo
                             </label>
                             <Input
@@ -114,44 +118,61 @@ export function AuthForm() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label className="text-sm font-medium leading-none">
                                 Tipo de Conta
                             </label>
                             <select
                                 {...register('role')}
-                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                             >
-                                <option value="patient">Paciente</option>
-                                <option value="doctor">Médico/Terapeuta</option>
+                                <option value="subject">Sujeito (Paciente)</option>
+                                <option value="doctor">Médico</option>
+                                <option value="coach">Treinador</option>
                             </select>
                         </div>
 
-                        {selectedRole === 'patient' && (
-                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                    Selecione seu Médico
-                                </label>
-                                <select
-                                    {...register('doctorId')}
-                                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <option value="">Selecione...</option>
-                                    {doctors.map(doc => (
-                                        <option key={doc.id} value={doc.id}>
-                                            {doc.full_name || 'Médico sem nome'}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-muted-foreground">
-                                    Obrigatório vincular a um profissional.
-                                </p>
-                            </div>
+                        {selectedRole === 'subject' && (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium leading-none">
+                                        Selecione seu Médico (Opcional)
+                                    </label>
+                                    <select
+                                        {...register('doctorId')}
+                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {doctors.map(doc => (
+                                            <option key={doc.id} value={doc.id}>
+                                                {doc.full_name || 'Médico sem nome'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium leading-none">
+                                        Selecione seu Treinador (Opcional)
+                                    </label>
+                                    <select
+                                        {...register('coachId')}
+                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {coaches.map(c => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.full_name || 'Treinador sem nome'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
                         )}
                     </>
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    <label className="text-sm font-medium leading-none">
                         Email
                     </label>
                     <Input
@@ -160,13 +181,10 @@ export function AuthForm() {
                         placeholder="seu@email.com"
                         className={errors.email ? 'border-destructive' : ''}
                     />
-                    {errors.email && (
-                        <p className="text-sm text-destructive">{errors.email.message}</p>
-                    )}
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    <label className="text-sm font-medium leading-none">
                         Senha
                     </label>
                     <Input
@@ -175,9 +193,6 @@ export function AuthForm() {
                         placeholder="••••••"
                         className={errors.password ? 'border-destructive' : ''}
                     />
-                    {errors.password && (
-                        <p className="text-sm text-destructive">{errors.password.message}</p>
-                    )}
                 </div>
 
                 {error && (
