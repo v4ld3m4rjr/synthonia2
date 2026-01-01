@@ -1,54 +1,71 @@
-// [AI Generated] Data: 19/01/2025
-// Descrição: Componente Card reutilizável para layouts
-// Gerado por: Cursor AI
-// Versão: React 18.3.1
-// AI_GENERATED_CODE_START
-import React from 'react';
+import * as React from "react"
 
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
-  hoverable?: boolean;
-}
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`rounded-xl border bg-card text-card-foreground shadow ${className}`}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-export const Card: React.FC<CardProps> = ({ 
-  children, 
-  className = '', 
-  hoverable = false 
-}) => {
-  const baseClasses = 'bg-gray-800 rounded-xl shadow-sm border border-gray-700';
-  const hoverClasses = hoverable ? 'hover:shadow-md transition-shadow duration-200' : '';
-  
-  return (
-    <div className={`${baseClasses} ${hoverClasses} ${className}`}>
-      {children}
-    </div>
-  );
-};
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`flex flex-col space-y-1.5 p-6 ${className}`}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
 
-interface CardHeaderProps {
-  children: React.ReactNode;
-  className?: string;
-}
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={`font-semibold leading-none tracking-tight ${className}`}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`px-6 py-4 border-b border-gray-700 ${className}`}>
-      {children}
-    </div>
-  );
-};
+const CardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={`text-sm text-muted-foreground ${className}`}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
 
-interface CardContentProps {
-  children: React.ReactNode;
-  className?: string;
-}
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={`p-6 pt-0 ${className}`} {...props} />
+))
+CardContent.displayName = "CardContent"
 
-export const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`px-6 py-4 ${className}`}>
-      {children}
-    </div>
-  );
-};
-// AI_GENERATED_CODE_END
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`flex items-center p-6 pt-0 ${className}`}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

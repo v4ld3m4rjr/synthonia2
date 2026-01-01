@@ -1,44 +1,42 @@
-// [AI Generated] Data: 19/01/2025
-// Descrição: Componente Button reutilizável com variantes
-// Gerado por: Cursor AI
-// Versão: React 18.3.1
-// AI_GENERATED_CODE_START
-import React from 'react';
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { cn } from '../../lib/utils';
+import { Loader2 } from 'lucide-react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  children: React.ReactNode;
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+    variant?: 'default' | 'outline' | 'ghost' | 'link';
+    size?: 'default' | 'sm' | 'lg' | 'icon';
+    isLoading?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
-  className = '',
-  children,
-  ...props
-}) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
-  
-  const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg',
-    secondary: 'bg-gray-700 hover:bg-gray-600 text-white',
-    outline: 'border-2 border-blue-600 text-blue-400 hover:bg-blue-900/20',
-    ghost: 'hover:bg-gray-700 text-gray-300'
-  };
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+    ({ className, variant = 'default', size = 'default', isLoading, children, ...props }, ref) => {
+        return (
+            <button
+                ref={ref}
+                className={cn(
+                    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                    {
+                        'bg-primary text-primary-foreground hover:bg-primary/90': variant === 'default',
+                        'border border-input bg-background hover:bg-accent hover:text-accent-foreground': variant === 'outline',
+                        'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
+                        'text-primary underline-offset-4 hover:underline': variant === 'link',
+                        'h-10 px-4 py-2': size === 'default',
+                        'h-9 rounded-md px-3': size === 'sm',
+                        'h-11 rounded-md px-8': size === 'lg',
+                        'h-10 w-10': size === 'icon',
+                    },
+                    className
+                )}
+                disabled={isLoading || props.disabled}
+                {...props}
+            >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {children}
+            </button>
+        );
+    }
+);
 
-  const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg'
-  };
+Button.displayName = "Button";
 
-  const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
-
-  return (
-    <button className={classes} {...props}>
-      {children}
-    </button>
-  );
-};
-// AI_GENERATED_CODE_END
+export { Button };
