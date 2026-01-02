@@ -83,8 +83,8 @@ export function AuthForm() {
                         data: {
                             full_name: data.fullName,
                             role: data.role || 'subject',
-                            doctor_id: data.role === 'subject' ? data.doctorId : null,
-                            coach_id: data.role === 'subject' ? data.coachId : null
+                            doctor_id: data.role === 'subject' && data.doctorId ? data.doctorId : null,
+                            coach_id: data.role === 'subject' && data.coachId ? data.coachId : null
                         },
                     },
                 });
