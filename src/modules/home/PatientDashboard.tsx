@@ -4,7 +4,6 @@ import type { DailyMetricsMental, DailyMetricsPhysical, Profile } from '../../ty
 import { checkManiaRisk, checkSuicideRisk } from '../../utils/calculations';
 import { Button } from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
 
 // Componente simples de Card para garantir que não quebre se o ui/Card não existir
 const SimpleCard = ({ title, children, className = '' }: { title: string, children: React.ReactNode, className?: string }) => (
