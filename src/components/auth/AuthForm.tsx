@@ -38,19 +38,26 @@ export function AuthForm() {
     useEffect(() => {
         if (!isLogin && selectedRole === 'subject') {
             const fetchPros = async () => {
-                // Fetch Doctors
-                const { data: docs } = await supabase
-                    .from('profiles')
-                    .select('id, full_name')
-                    .eq('role', 'doctor');
-                if (docs) setDoctors(docs);
+                try {
+                    // Fetch Doctors
+                    const { data: docs, error: docError } = await supabase
+                        .from('profiles')
+                        .select('id, full_name')
+                        .eq('role', 'doctor');
+                    
+                    if (!docError && docs) setDoctors(docs);
 
-                // Fetch Coaches
-                const { data: coachesData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name')
-                    .eq('role', 'coach');
-                if (coachesData) setCoaches(coachesData);
+                    // Fetch Coaches
+                    const { data: coachesData, error: coachError } = await supabase
+                        .from('profiles')
+                        .select('id, full_name')
+                        .eq('role', 'coach');
+                    
+                    if (!coachError && coachesData) setCoaches(coachesData);
+                } catch (err) {
+                    console.error('Erro ao buscar profissionais:', err);
+                    // Silently fail or set empty lists is better than crashing
+                }
             };
             fetchPros();
         }
