@@ -186,9 +186,27 @@ export function AuthForm() {
                         {...register('email')}
                         type="email"
                         placeholder="seu@email.com"
+                        autoComplete="email"
                         className={errors.email ? 'border-destructive' : ''}
                     />
+                    {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                 </div>
+
+                {!isLogin && (
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none">
+                            Confirmar Email
+                        </label>
+                        <Input
+                            {...register('confirmEmail')}
+                            type="email"
+                            placeholder="Confirme seu email"
+                            autoComplete="email"
+                            className={errors.confirmEmail ? 'border-destructive' : ''}
+                        />
+                        {errors.confirmEmail && <p className="text-xs text-destructive">{errors.confirmEmail.message}</p>}
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium leading-none">
@@ -198,9 +216,27 @@ export function AuthForm() {
                         {...register('password')}
                         type="password"
                         placeholder="••••••"
+                        autoComplete="new-password"
                         className={errors.password ? 'border-destructive' : ''}
                     />
+                     {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
                 </div>
+
+                {!isLogin && (
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none">
+                            Confirmar Senha
+                        </label>
+                        <Input
+                            {...register('confirmPassword')}
+                            type="password"
+                            placeholder="••••••"
+                            autoComplete="new-password"
+                            className={errors.confirmPassword ? 'border-destructive' : ''}
+                        />
+                        {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
+                    </div>
+                )}
 
                 {error && (
                     <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
