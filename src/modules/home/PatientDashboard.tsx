@@ -73,51 +73,45 @@ export function PatientDashboard({ userProfile }: { userProfile: Profile }) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Readiness Card */}
-        <SimpleCard title="Prontidão para Treino">
-          <div className="text-center py-4">
-            <span className="text-4xl font-bold text-primary">{readinessScore}</span>
-            <p className="text-sm text-muted-foreground mt-2">
-              {typeof readinessScore === 'number' && readinessScore >= 7 ? 'Liberado para Treino Intenso' : 'Priorize Recuperação'}
-            </p>
+        {/* Botão Registro Diário (Treino) */}
+        <SimpleCard title="Registro Diário" className="hover:bg-accent/5 transition-colors cursor-pointer" onClick={() => navigate('/training/new')}>
+          <div className="flex flex-col items-center justify-center py-6 gap-3">
+             <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-300"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 18.657a1 1 0 0 1 0 1.414l-4.242 4.243a1 1 0 0 1-1.415 0l-4.242-4.243a1 1 0 0 1 0-1.414l4.242-4.243a1 1 0 0 1 1.415 0l4.242 4.243Z"/><path d="m9.6 9.6-4.243 4.243a1 1 0 0 1-1.414 0L1.115 11.015a1 1 0 0 1 0-1.415l4.243-4.242a1 1 0 0 1 1.414 0L9.6 9.6Z"/><path d="m14.4 14.4 4.243-4.243a1 1 0 0 1 1.414 0l2.828 2.829a1 1 0 0 1 0 1.414l-4.243 4.243a1 1 0 0 1-1.414 0L14.4 14.4Z"/><path d="m9.6 9.6 4.8-4.8"/></svg>
+             </div>
+             <span className="font-semibold text-primary">Registrar Treino</span>
           </div>
         </SimpleCard>
 
-        {/* Mental Status */}
-        <SimpleCard title="Status Mental">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Humor</span>
-              <span className="font-medium">{physicalMetrics?.mood_general ?? '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Ansiedade</span>
-              <span className="font-medium">{mentalMetrics?.anxiety ?? '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Energia</span>
-              <span className="font-medium">{mentalMetrics?.energy_level ?? '-'}</span>
-            </div>
+        {/* Botão Spravato */}
+        <SimpleCard title="Sessão Spravato" className="hover:bg-accent/5 transition-colors cursor-pointer" onClick={() => navigate('/spravato/new')}>
+          <div className="flex flex-col items-center justify-center py-6 gap-3">
+             <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 dark:text-purple-300"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+             </div>
+             <span className="font-semibold text-primary">Nova Sessão</span>
           </div>
         </SimpleCard>
 
-        {/* Último Treino */}
-        <SimpleCard title="Ações Rápidas">
-           <div className="space-y-3">
-             <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/training/new')}>
-               Registrar Treino
-             </Button>
-             <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/spravato/new')}>
-               Registrar Sessão Spravato
-             </Button>
-           </div>
+        {/* Botão Testes */}
+        <SimpleCard title="Testes / Avaliação" className="hover:bg-accent/5 transition-colors cursor-pointer" onClick={() => navigate('/assessment')}>
+          <div className="flex flex-col items-center justify-center py-6 gap-3">
+             <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 dark:text-green-300"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+             </div>
+             <span className="font-semibold text-primary">Realizar Testes</span>
+          </div>
         </SimpleCard>
       </div>
 
-      {/* Gráficos de Tendência (Placeholder) */}
-      <SimpleCard title="Evolução de Carga (TSB)">
-        <div className="h-48 flex items-center justify-center bg-secondary/20 rounded-lg">
-          <p className="text-muted-foreground">Gráfico de TSB vs Carga Crônica será exibido aqui</p>
+      {/* Histórico de Prontidão (Readiness) */}
+      <SimpleCard title="Histórico de Prontidão (Readiness)">
+        <div className="h-48 flex flex-col items-center justify-center bg-secondary/10 rounded-lg border border-dashed border-muted p-4">
+          <p className="text-muted-foreground mb-2">Sua prontidão atual:</p>
+          <span className={`text-5xl font-bold ${typeof readinessScore === 'number' && readinessScore >= 7 ? 'text-green-500' : 'text-orange-500'}`}>
+             {readinessScore}
+          </span>
+          <p className="text-xs text-muted-foreground mt-4">Gráfico de tendência semanal será exibido aqui</p>
         </div>
       </SimpleCard>
     </div>
