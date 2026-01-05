@@ -40,7 +40,7 @@ export function AuthForm() {
     const [coaches, setCoaches] = useState<{ id: string, full_name: string }[]>([]);
     const navigate = useNavigate();
 
-    const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<any>({
+    const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
         resolver: zodResolver(isLogin ? loginSchema : signupSchema),
         defaultValues: {
             role: 'subject'
