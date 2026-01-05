@@ -7,16 +7,30 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useNavigate } from 'react-router-dom';
 
-const authSchema = z.object({
+const loginSchema = z.object({
     email: z.string().email('Email inválido'),
-    password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
-    fullName: z.string().optional(),
-    role: z.enum(['subject', 'doctor', 'coach']).optional(),
-    doctorId: z.string().optional(),
-    coachId: z.string().optional(),
+    password: z.string().min(1, 'Senha é obrigatória'),
+    role: z.string().optional()
 });
 
-type AuthFormData = z.infer<typeof authSchema>;
+const signupSchema = z.object({
+    email: z.string().email('Email inválido'),
+    confirmEmail: z.string().email('Email inválido'),
+    password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
+    confirmPassword: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
+    fullName: z.string().min(2, 'Nome é obrigatório'),
+    role: z.enum(['subject', 'doctor', 'coach']),
+    doctorId: z.string().optional(),
+    coachId: z.string().optional(),
+}).refine((data) => data.email === data.confirmEmail, {
+    message: "Os emails não coincidem",
+    path: ["confirmEmail"],
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+});
+
+type AuthFormData = z.infer<typeof signupSchema>;
 
 export function AuthForm() {
     const [isLogin, setIsLogin] = useState(true);
@@ -189,7 +203,7 @@ export function AuthForm() {
                         autoComplete="email"
                         className={errors.email ? 'border-destructive' : ''}
                     />
-                    {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                    {errors.email && <p className="text-xs text-destructive">{String(errors.email.message)}</p>}
                 </div>
 
                 {!isLogin && (
@@ -204,7 +218,7 @@ export function AuthForm() {
                             autoComplete="email"
                             className={errors.confirmEmail ? 'border-destructive' : ''}
                         />
-                        {errors.confirmEmail && <p className="text-xs text-destructive">{errors.confirmEmail.message}</p>}
+                        {errors.confirmEmail && <p className="text-xs text-destructive">{String(errors.confirmEmail.message)}</p>}
                     </div>
                 )}
 
@@ -219,7 +233,7 @@ export function AuthForm() {
                         autoComplete="new-password"
                         className={errors.password ? 'border-destructive' : ''}
                     />
-                     {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+                     {errors.password && <p className="text-xs text-destructive">{String(errors.password.message)}</p>}
                 </div>
 
                 {!isLogin && (
@@ -234,7 +248,7 @@ export function AuthForm() {
                             autoComplete="new-password"
                             className={errors.confirmPassword ? 'border-destructive' : ''}
                         />
-                        {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
+                        {errors.confirmPassword && <p className="text-xs text-destructive">{String(errors.confirmPassword.message)}</p>}
                     </div>
                 )}
 

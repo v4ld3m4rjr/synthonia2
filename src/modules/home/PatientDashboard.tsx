@@ -6,8 +6,15 @@ import { Button } from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 
 // Componente simples de Card para garantir que não quebre se o ui/Card não existir
-const SimpleCard = ({ title, children, className = '' }: { title: string, children: React.ReactNode, className?: string }) => (
-  <div className={`bg-card border border-border rounded-xl p-6 shadow-sm ${className}`}>
+interface SimpleCardProps {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+}
+
+const SimpleCard = ({ title, children, className = '', onClick }: SimpleCardProps) => (
+  <div onClick={onClick} className={`bg-card border border-border rounded-xl p-6 shadow-sm ${className}`}>
     <h3 className="text-lg font-semibold mb-4 text-foreground">{title}</h3>
     {children}
   </div>
