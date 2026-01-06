@@ -1,8 +1,6 @@
 streamlit
-supabase
 pandas
 plotly
 altair
 python-dotenv
-pydantic>=2.10.2
-pydantic-core>=2.27.2
+httpx
