@@ -17,20 +17,8 @@ with st.sidebar:
     
     st.markdown("---")
     
-    if st.button("📊 Dashboard", use_container_width=True):
-        st.switch_page("main.py")
-        
-    if st.button("📝 Check-in Diário", use_container_width=True):
-        st.switch_page("pages/1_Checkin.py")
-        
-    if st.button("🏋️ Treino", use_container_width=True):
-        st.switch_page("pages/2_Treino.py")
-        
-    if st.button("💊 Spravato", use_container_width=True):
-        st.switch_page("pages/3_Spravato.py")
-        
-    if st.button("📋 Questionários", use_container_width=True):
-        st.switch_page("pages/4_Questionarios.py")
+    # Navigation is handled automatically by Streamlit pages/ directory
+    st.info("Use o menu acima para navegar.")
         
     st.markdown("---")
     
