@@ -1,28 +1,50 @@
 import streamlit as st
 import datetime
 
-st.set_page_config(page_title="Check-in | Synthonia", page_icon="📝")
+st.set_page_config(page_title="Check-in | Synthonia", page_icon="📝", layout="centered")
 
-st.title("📝 Check-in Diário")
-st.markdown("Registre como você está se sentindo hoje.")
+st.title("📝 Check-in Diário Completo")
+st.markdown("Monitoramento detalhado de saúde e bem-estar.")
 
-with st.form("checkin_form"):
+with st.form("checkin_form_completo"):
+    st.subheader("1. Estado Mental & Emocional")
     col1, col2 = st.columns(2)
-    
     with col1:
-        humor = st.slider("Como está seu humor?", 0, 10, 5, help="0 = Péssimo, 10 = Excelente")
-        energia = st.slider("Nível de Energia", 0, 10, 5)
-        
+        humor = st.slider("Humor Geral (0-10)", 0, 10, 5, help="0=Deprimido, 10=Eufórico")
+        ansiedade = st.slider("Nível de Ansiedade (0-10)", 0, 10, 2, help="0=Nenhuma, 10=Pânico")
     with col2:
-        ansiedade = st.slider("Nível de Ansiedade", 0, 10, 2)
-        sono = st.number_input("Horas de Sono", min_value=0.0, max_value=24.0, value=7.0, step=0.5)
+        energia = st.slider("Nível de Energia (0-10)", 0, 10, 5)
+        irritabilidade = st.slider("Irritabilidade (0-10)", 0, 10, 1)
+
+    st.subheader("2. Sono & Recuperação")
+    col3, col4 = st.columns(2)
+    with col3:
+        sono_horas = st.number_input("Horas de Sono", 0.0, 24.0, 7.0, 0.5)
+    with col4:
+        sono_qualidade = st.select_slider("Qualidade do Sono", options=["Péssima", "Ruim", "Regular", "Boa", "Excelente"], value="Regular")
     
-    tags = st.multiselect("Sintomas / Tags", ["Cansaço", "Foco Alto", "Irritabilidade", "Dor de Cabeça", "Motivado", "Tristeza"])
-    notas = st.text_area("Notas do dia")
+    st.subheader("3. Hábitos & Rotina")
+    col5, col6 = st.columns(2)
+    with col5:
+        medicacao = st.radio("Tomou as medicações?", ["Sim", "Não", "Parcialmente"], horizontal=True)
+    with col6:
+        alimentacao = st.select_slider("Qualidade da Alimentação", options=["Péssima", "Desregrada", "Normal", "Saudável", "Impecável"], value="Normal")
+
+    st.subheader("4. Contexto")
+    sintomas = st.multiselect("Sintomas Físicos/Mentais", 
+        ["Dor de Cabeça", "Tensão Muscular", "Fadiga", "Foco Alto", "Névoa Mental", "Compulsão Alimentar", "Libido Baixa", "Libido Alta"])
     
-    submitted = st.form_submit_button("Salvar Registro", use_container_width=True, type="primary")
-    
+    estressores = st.multiselect("Fatores de Estresse",
+        ["Trabalho", "Família", "Finanças", "Relacionamento", "Saúde", "Trânsito/Deslocamento"])
+
+    st.subheader("5. Diário")
+    gratidao = st.text_input("Uma coisa pela qual sou grato hoje:")
+    notas = st.text_area("Notas gerais, insights ou observações:")
+
+    submitted = st.form_submit_button("💾 Salvar Check-in", type="primary", use_container_width=True)
+
     if submitted:
-        # Aqui entra a lógica de salvar no Supabase (futuro)
-        st.success(f"Check-in salvo! Humor: {humor} | Energia: {energia}")
+        # Lógica de salvamento futura
+        st.success("Check-in registrado com sucesso!")
         st.balloons()
+        st.write(f"**Resumo:** Humor {humor} | Energia {energia} | Sono {sono_horas}h ({sono_qualidade})")
