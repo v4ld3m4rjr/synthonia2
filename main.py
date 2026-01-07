@@ -33,20 +33,22 @@ st.markdown(f"""
     }}
     
     /* Botões */
-    div.stButton > button {{
+    div.stButton > button {
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
-        border: none;
+        border: 1px solid #FFFFFF;
         padding: 10px 24px;
-        border-radius: 12px;
+        border-radius: 25px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         width: 100%;
-    }}
-    div.stButton > button:hover {{
+        font-weight: 600;
+    }
+    div.stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+        border-color: #f8fafc;
     }}
     
     /* Logo Container */
@@ -125,7 +127,7 @@ st.caption("© 2026 Synthonia v3.2")
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-    st.image(LOGO_URL, width=150)
+    st.image(LOGO_URL, width=77)
     st.markdown('</div>', unsafe_allow_html=True)
         
     st.write("---")

@@ -8,6 +8,7 @@ import calendar
 st.set_page_config(page_title="Diário | Synthonia", page_icon="📖", layout="centered")
 
 BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
+LOGO_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/BAIXA_RESOLUCAO_ICONE_VALDEMARJR_COR_FUNDOTRANSPARENTE.png"
 
 # --- CUSTOM CSS ---
 st.markdown(f"""
@@ -26,20 +27,22 @@ st.markdown(f"""
     }}
 
     /* Button Styling */
-    div.stButton > button {{
+    div.stButton > button {
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
-        border: none;
+        border: 1px solid #FFFFFF;
         padding: 10px 24px;
-        border-radius: 12px;
+        border-radius: 25px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         width: 100%;
-    }}
-    div.stButton > button:hover {{
+        font-weight: 600;
+    }
+    div.stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+        border-color: #f8fafc;
     }}
     
     /* Calendar Button Specifics */
@@ -174,6 +177,8 @@ if st.button("💾 Gravar Anotação", type="primary"):
 
 # --- HISTORICAL SEARCH (Sidebar) ---
 with st.sidebar:
+    st.image(LOGO_URL, width=77)
+    st.write("---")
     st.header("Busca")
     search_query = st.text_input("Palavra-chave...")
     if search_query:

@@ -74,6 +74,8 @@ df = get_data()
 
 # --- SIDEBAR & FILTERS ---
 with st.sidebar:
+    st.image(LOGO_URL, width=77)
+    st.write("---")
     st.header("Visualização")
     
     # Date Filter
