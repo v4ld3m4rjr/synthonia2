@@ -3,15 +3,25 @@ from supabase import create_client, Client
 import re
 
 # Initialize Supabase Client
-# Tenta pegar dos secrets, se não tiver, usa mock para não quebrar o app
 try:
     SUPABASE_URL = st.secrets["supabase"]["url"]
     SUPABASE_KEY = st.secrets["supabase"]["key"]
+    
+    # Validate configuration exists
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise ValueError("Supabase credentials missing")
+
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Optional: Simple health check to ensure connection (e.g., checking auth health)
+    # This is lightweight and catches bad keys early
+    # supabase.auth.get_session() 
+    
     USE_MOCK = False
-except Exception:
+except Exception as e:
+    print(f"[AUTH ERROR] Failed to connect to Supabase: {e}")
     USE_MOCK = True
-    # st.warning("⚠️ Supabase credentials not found in secrets. Using Mock Authentication.")
+    # st.error(f"⚠️ Erro de conexão com banco de dados. Usando modo offline (Mock). Detalhes: {e}")
 
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
@@ -84,7 +94,13 @@ def login_user(email, password):
         }, None
 
     if USE_MOCK:
-        _ensure_mock_db()
+        if '_ensure_mock_db' in globals():
+            _ensure_mock_db()
+        else:
+            # Fallback definition if somehow missing in scope
+            if 'mock_users' not in st.session_state:
+                st.session_state.mock_users = {}
+
         # Check Session State Mock Users first
         if email in st.session_state.mock_users:
             user_data = st.session_state.mock_users[email]
