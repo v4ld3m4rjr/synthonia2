@@ -168,11 +168,20 @@ def login_screen():
                     res, error = auth.login_user(email_med, pass_med)
                     
                     if res:
-                        role = res.user.user_metadata.get('role', 'doctor')
+                        # Handle Response Structure (Mock vs Real Supabase)
+                        user_obj = res.user if hasattr(res, 'user') else res.get('user')
+                        
+                        # Normalize access to metadata
+                        if hasattr(user_obj, 'user_metadata'):
+                             meta = user_obj.user_metadata
+                        else:
+                             meta = user_obj.get('user_metadata', {})
+
+                        role = meta.get('role', 'doctor')
                         if role in ['admin', 'doctor']:
                             st.session_state.logged_in = True
                             st.session_state.role = role
-                            st.session_state.user_name = res.user.user_metadata.get('full_name', email_med)
+                            st.session_state.user_name = meta.get('full_name', email_med)
                             st.success(f"Bem-vindo, {st.session_state.user_name}!")
                             st.rerun()
                         else:
