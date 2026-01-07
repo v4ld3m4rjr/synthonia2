@@ -20,8 +20,13 @@ try:
     USE_MOCK = False
 except Exception as e:
     print(f"[AUTH ERROR] Failed to connect to Supabase: {e}")
+    INIT_ERROR = str(e)
     USE_MOCK = True
     # st.error(f"⚠️ Erro de conexão com banco de dados. Usando modo offline (Mock). Detalhes: {e}")
+
+def _ensure_mock_db():
+    if 'mock_users' not in st.session_state:
+        st.session_state.mock_users = {}
 
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
