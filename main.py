@@ -262,7 +262,7 @@ if not st.session_state.logged_in:
 else:
     if st.session_state.role == "patient":
         patient_home()
-    elif st.session_state.role == "doctor":
+    elif st.session_state.role in ["doctor", "admin"]:
         doctor_dashboard()
 
 # --- FOOTER ---
