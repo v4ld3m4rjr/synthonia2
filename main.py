@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from datetime import datetime, timedelta
+import auth_service as auth
 
 # Configuração da Página
 st.set_page_config(
