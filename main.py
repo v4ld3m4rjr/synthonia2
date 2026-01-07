@@ -288,44 +288,157 @@ def doctor_dashboard():
     st.title("🩺 Painel Médico")
     st.markdown(f"Bem-vindo, {st.session_state.user_name}")
     
-    # --- FILTERS ---
-    with st.expander("Filtros de Pacientes e Variáveis", expanded=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            paciente = st.selectbox("Selecione o Paciente", ["João Silva", "Maria Oliveira", "Carlos Santos", "Ana Pereira"])
-        with c2:
-            periodo = st.select_slider("Período de Análise", options=["7 dias", "14 dias", "21 dias", "28 dias"], value="7 dias")
-        with c3:
-            metricas = st.multiselect("Variáveis Clínicas", 
-                                      ["Humor", "Ansiedade", "Sono", "Adesão Medicamentosa", "Ideação Suicida"],
-                                      default=["Humor", "Ansiedade"])
-            
-    # --- MOCK DATA GENERATION ---
-    days_map = {"7 dias": 7, "14 dias": 14, "21 dias": 21, "28 dias": 28}
-    days = days_map[periodo]
-    dates = pd.date_range(end=datetime.today(), periods=days)
-    
-    data = pd.DataFrame({
-        "Data": dates,
-        "Humor": np.random.randint(3, 9, size=days),
-        "Ansiedade": np.random.randint(1, 8, size=days),
-        "Sono": np.random.randint(4, 10, size=days),
-        "Ideação Suicida": np.random.randint(0, 2, size=days)
-    })
-    
-    # --- CHARTS ---
-    st.subheader(f"Evolução Clínica: {paciente}")
-    
-    if metricas:
-        fig = px.line(data, x="Data", y=metricas, markers=True, template="plotly_dark", title=f"Últimos {days} dias")
-        fig.update_traces(line_shape='spline', mode='lines+markers')
-        fig.update_layout(xaxis_title="Data", yaxis_title="Score / Nível")
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Selecione variáveis para visualizar o gráfico.")
+    # State for Navigation (List vs Detail)
+    if 'doc_view' not in st.session_state:
+        st.session_state.doc_view = 'list'
+    if 'selected_patient' not in st.session_state:
+        st.session_state.selected_patient = None
+
+    # --- MOCK PATIENT DATABASE ---
+    patients_db = pd.DataFrame([
+        {"id": 1, "nome": "João Silva", "status": "Em Tratamento", "ultima_consulta": "2024-03-10", "risco": "Médio"},
+        {"id": 2, "nome": "Maria Oliveira", "status": "Estável", "ultima_consulta": "2024-03-12", "risco": "Baixo"},
+        {"id": 3, "nome": "Carlos Santos", "status": "Alerta", "ultima_consulta": "2024-03-08", "risco": "Alto"},
+        {"id": 4, "nome": "Ana Pereira", "status": "Em Tratamento", "ultima_consulta": "2024-03-14", "risco": "Baixo"},
+    ])
+
+    # --- LIST VIEW ---
+    if st.session_state.doc_view == 'list':
+        st.subheader("Pacientes Acompanhados")
         
-    # --- EXPORT ---
-    st.download_button("📥 Exportar Prontuário (CSV)", data.to_csv(), f"prontuario_{paciente.lower().replace(' ', '_')}.csv", "text/csv")
+        # Filters
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            search = st.text_input("Buscar paciente...", placeholder="Nome ou ID")
+        with c2:
+            status_filter = st.selectbox("Status", ["Todos", "Em Tratamento", "Estável", "Alerta"])
+        
+        # Filtering Logic
+        filtered_df = patients_db.copy()
+        if search:
+            filtered_df = filtered_df[filtered_df['nome'].str.contains(search, case=False)]
+        if status_filter != "Todos":
+            filtered_df = filtered_df[filtered_df['status'] == status_filter]
+            
+        # Display Table with Selection
+        # We use a trick with columns to make a "clickable" table or just standard buttons per row
+        
+        # Header
+        h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 1, 1])
+        h1.markdown("**Nome**")
+        h2.markdown("**Status**")
+        h3.markdown("**Última Consulta**")
+        h4.markdown("**Risco**")
+        h5.markdown("**Ação**")
+        st.markdown("---")
+        
+        for index, row in filtered_df.iterrows():
+            c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 1, 1])
+            c1.write(row['nome'])
+            
+            # Status Color
+            status_color = "green" if row['status'] == "Estável" else "orange" if row['status'] == "Em Tratamento" else "red"
+            c2.markdown(f":{status_color}[{row['status']}]")
+            
+            c3.write(row['ultima_consulta'])
+            c4.write(row['risco'])
+            
+            if c5.button("Ver", key=f"btn_{row['id']}"):
+                st.session_state.selected_patient = row
+                st.session_state.doc_view = 'detail'
+                st.rerun()
+                
+        st.markdown("---")
+        
+        # GLOBAL EXPORT
+        csv_all = filtered_df.to_csv(index=False).encode('utf-8')
+        export_filename = f"pacientes_export_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        if st.download_button(
+            label="📥 Exportar Lista Completa (CSV)",
+            data=csv_all,
+            file_name=export_filename,
+            mime="text/csv",
+        ):
+            st.success("Exportação iniciada com sucesso!")
+
+    # --- DETAIL VIEW ---
+    elif st.session_state.doc_view == 'detail':
+        patient = st.session_state.selected_patient
+        
+        # Header with Back Button
+        c1, c2 = st.columns([1, 6])
+        with c1:
+            if st.button("⬅ Voltar"):
+                st.session_state.doc_view = 'list'
+                st.session_state.selected_patient = None
+                st.rerun()
+        with c2:
+            st.subheader(f"Prontuário: {patient['nome']}")
+            
+        st.markdown("---")
+        
+        # --- FILTERS (Inside Detail) ---
+        with st.expander("Controles de Visualização", expanded=True):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                 periodo = st.select_slider("Período", options=["7 dias", "14 dias", "21 dias", "28 dias"], value="7 dias")
+            with c2:
+                 metricas = st.multiselect("Variáveis", ["Humor", "Ansiedade", "Sono", "Ideação Suicida"], default=["Humor", "Ansiedade"])
+        
+        # --- MOCK DATA FOR CHARTS ---
+        days_map = {"7 dias": 7, "14 dias": 14, "21 dias": 21, "28 dias": 28}
+        days = days_map[periodo]
+        dates = pd.date_range(end=datetime.today(), periods=days)
+        
+        chart_data = pd.DataFrame({
+            "Data": dates,
+            "Humor": np.random.randint(3, 9, size=days),
+            "Ansiedade": np.random.randint(1, 8, size=days),
+            "Sono": np.random.randint(4, 10, size=days),
+            "Ideação Suicida": np.random.randint(0, 2, size=days)
+        })
+        
+        # Charts
+        if metricas:
+            fig = px.line(chart_data, x="Data", y=metricas, markers=True, template="plotly_dark", title=f"Evolução - Últimos {days} dias")
+            fig.update_traces(line_shape='spline', mode='lines+markers')
+            st.plotly_chart(fig, use_container_width=True)
+            
+        # --- JOURNAL SECTION (DIÁRIO) ---
+        st.subheader("📖 Diário do Paciente (Últimas Entradas)")
+        
+        # Mock Journal Entries
+        journal_entries = [
+            {"data": (datetime.now() - timedelta(days=1)).strftime("%d/%m/%Y"), "texto": "Hoje me senti um pouco mais ansioso pela manhã, mas melhorou à tarde."},
+            {"data": (datetime.now() - timedelta(days=2)).strftime("%d/%m/%Y"), "texto": "Dormi bem, acordei disposto. Sem efeitos colaterais da medicação."},
+            {"data": (datetime.now() - timedelta(days=5)).strftime("%d/%m/%Y"), "texto": "Sessão de terapia foi intensa, mas produtiva."}
+        ]
+        
+        for entry in journal_entries:
+            with st.container(border=True):
+                st.markdown(f"**{entry['data']}**")
+                st.write(entry['texto'])
+                
+        # --- INDIVIDUAL EXPORT ---
+        st.markdown("### Exportação de Dados")
+        
+        # Combine chart data and journal for export (simplified as two separate sheets or just main data)
+        # Here we export the numerical data + journal text if possible, but let's stick to the requested "Patient Data"
+        
+        # Prepare CSV
+        csv_data = chart_data.to_csv(index=False).encode('utf-8')
+        file_name = f"prontuario_{patient['nome'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            if st.download_button(
+                label="📥 Exportar Prontuário Completo",
+                data=csv_data,
+                file_name=file_name,
+                mime="text/csv",
+            ):
+                st.success("Download iniciado!")
 
 
 # --- MAIN CONTROLLER ---
