@@ -147,6 +147,12 @@ def login_user(email, password):
         
         if "Failed to connect" in error_msg or "Max retries exceeded" in error_msg:
              return None, "Erro de conexão com o servidor. Verifique sua internet."
+        
+        if "Invalid login credentials" in error_msg:
+             return None, "Email ou senha incorretos."
+
+        if "Email not confirmed" in error_msg:
+             return None, "Seu email ainda não foi confirmado. Verifique sua caixa de entrada."
              
         return None, f"Erro no login: {error_msg}"
 
