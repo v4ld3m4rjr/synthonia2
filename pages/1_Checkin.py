@@ -22,7 +22,7 @@ st.markdown(f"""
         background-attachment: fixed;
     }}
 
-    div.stButton > button {
+    div.stButton > button {{
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
         border: 1px solid #FFFFFF;
@@ -31,8 +31,8 @@ st.markdown(f"""
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         font-weight: 600;
-    }
-    div.stButton > button:hover {
+    }}
+    div.stButton > button:hover {{
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
