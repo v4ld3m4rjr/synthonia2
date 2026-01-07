@@ -1,28 +1,64 @@
 import streamlit as st
 from supabase import create_client, Client
 import re
+from datetime import datetime
+import toml
+import os
 
-# Initialize Supabase Client
+# --- SECRETS LOADING HELPER ---
+def load_secrets():
+    """
+    Robustly loads secrets from .streamlit/secrets.toml or st.secrets.
+    Forces reload from file if keys are missing in st.secrets cache.
+    """
+    secrets = {}
+    
+    # 1. Try Standard st.secrets
+    try:
+        if "supabase" in st.secrets:
+            secrets["url"] = st.secrets["supabase"]["url"]
+            secrets["key"] = st.secrets["supabase"]["key"]
+            return secrets
+    except Exception:
+        pass
+
+    # 2. Force File Read (Fallback for Cache Issues)
+    try:
+        secrets_path = os.path.join(os.getcwd(), ".streamlit", "secrets.toml")
+        if os.path.exists(secrets_path):
+            with open(secrets_path, "r") as f:
+                data = toml.load(f)
+                if "supabase" in data:
+                    secrets["url"] = data["supabase"]["url"]
+                    secrets["key"] = data["supabase"]["key"]
+                    return secrets
+    except Exception as e:
+        print(f"[SECRETS ERROR] Failed to read file directly: {e}")
+
+    return None
+
+# --- INITIALIZATION ---
+INIT_ERROR = None
+supabase: Client = None
+USE_MOCK = True
+
 try:
-    SUPABASE_URL = st.secrets["supabase"]["url"]
-    SUPABASE_KEY = st.secrets["supabase"]["key"]
+    creds = load_secrets()
     
-    # Validate configuration exists
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        raise ValueError("Supabase credentials missing")
-
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    if not creds:
+        raise ValueError("Supabase credentials not found in secrets.toml or st.secrets")
+        
+    SUPABASE_URL = creds["url"]
+    SUPABASE_KEY = creds["key"]
     
-    # Optional: Simple health check to ensure connection (e.g., checking auth health)
-    # This is lightweight and catches bad keys early
-    # supabase.auth.get_session() 
-    
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     USE_MOCK = False
+    print("[AUTH] Successfully connected to Supabase (Real Mode)")
+    
 except Exception as e:
     print(f"[AUTH ERROR] Failed to connect to Supabase: {e}")
     INIT_ERROR = str(e)
     USE_MOCK = True
-    # st.error(f"⚠️ Erro de conexão com banco de dados. Usando modo offline (Mock). Detalhes: {e}")
 
 def _ensure_mock_db():
     if 'mock_users' not in st.session_state:
