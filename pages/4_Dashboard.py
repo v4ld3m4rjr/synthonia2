@@ -7,6 +7,7 @@ from datetime import datetime, date
 st.set_page_config(page_title="Dashboard | Synthonia", page_icon="📈", layout="wide")
 
 BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
+LOGO_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/BAIXA_RESOLUCAO_ICONE_VALDEMARJR_COR_FUNDOTRANSPARENTE.png"
 
 # --- CUSTOM CSS ---
 st.markdown(f"""
