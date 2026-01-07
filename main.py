@@ -41,6 +41,13 @@ st.markdown("""
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
     }
     
+    /* Logo Container */
+    .logo-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
     /* Titles */
     h1, h2, h3 { color: #f8fafc !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     
@@ -55,10 +62,13 @@ st.markdown("""
 # --- HEADER ---
 col1, col2 = st.columns([1, 4])
 with col1:
+    # Logo Logic: Tries to find assets/logo.png
     if os.path.exists("assets/logo.png"):
         st.image("assets/logo.png", width=120)
     else:
-        st.markdown("🧠", unsafe_allow_html=True)
+        # Fallback if image not found
+        st.markdown("<div style='font-size: 4rem; text-align: center;'>🧠</div>", unsafe_allow_html=True)
+        
 with col2:
     st.title("Synthonia")
     st.markdown("### Monitoramento Integrativo & Diário")
@@ -80,9 +90,9 @@ with c1:
 with c2:
     with st.container(border=True):
         st.markdown("## 📋")
-        st.markdown("**Questionários**")
+        st.markdown("**Questionários**") # Label mantido como solicitado
         st.caption("Semanal, Mensal e Trimestral.")
-        st.page_link("pages/2_Questionarios.py", label="Ver Avaliações", icon="👉", use_container_width=True)
+        st.page_link("pages/2_Questionarios.py", label="Questionários", icon="👉", use_container_width=True)
 
 with c3:
     with st.container(border=True):
@@ -105,7 +115,11 @@ st.caption("© 2026 Synthonia v3.0")
 # --- SIDEBAR ---
 with st.sidebar:
     if os.path.exists("assets/logo.png"):
-        st.image("assets/logo.png", use_container_width=True)
+        # Centralized sidebar logo
+        st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+        st.image("assets/logo.png", width=150)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
     st.write("---")
     if st.button("Sair", icon="🚪"):
         st.session_state.clear()
