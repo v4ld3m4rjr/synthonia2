@@ -84,6 +84,7 @@ def login_user(email, password):
         }, None
 
     if USE_MOCK:
+        _ensure_mock_db()
         # Check Session State Mock Users first
         if email in st.session_state.mock_users:
             user_data = st.session_state.mock_users[email]
