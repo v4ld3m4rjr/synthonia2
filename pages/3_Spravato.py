@@ -1,7 +1,50 @@
 import streamlit as st
 import datetime
+import json
+import os
+import calendar
+import time
 
-st.set_page_config(page_title="Spravato | Synthonia", page_icon="💊", layout="centered")
+st.set_page_config(page_title="Spravatto | Synthonia", page_icon="💊", layout="centered")
+
+# --- PERSISTENCE LOGIC ---
+SPRAVATO_FILE = "spravato_data.json"
+
+def load_spravato_data():
+    if os.path.exists(SPRAVATO_FILE):
+        with open(SPRAVATO_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_spravato_data(data):
+    with open(SPRAVATO_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+if 'spravato_data' not in st.session_state:
+    st.session_state.spravato_data = load_spravato_data()
+
+# --- CALENDAR STATE ---
+if 'cal_year' not in st.session_state:
+    st.session_state.cal_year = datetime.date.today().year
+if 'cal_month' not in st.session_state:
+    st.session_state.cal_month = datetime.date.today().month
+if 'selected_date' not in st.session_state:
+    st.session_state.selected_date = datetime.date.today()
+
+def change_month(delta):
+    m = st.session_state.cal_month + delta
+    y = st.session_state.cal_year
+    if m > 12:
+        m = 1
+        y += 1
+    elif m < 1:
+        m = 12
+        y -= 1
+    st.session_state.cal_month = m
+    st.session_state.cal_year = y
+
+def select_day(d):
+    st.session_state.selected_date = datetime.date(st.session_state.cal_year, st.session_state.cal_month, d)
 
 BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
 LOGO_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/BAIXA_RESOLUCAO_ICONE_VALDEMARJR_COR_FUNDOTRANSPARENTE.png"
@@ -51,10 +94,17 @@ st.markdown(f"""
             width: 50px !important;
         }}
     }}
+    
+    /* Calendar Button Specifics */
+    .calendar-btn {{
+        padding: 5px !important;
+        font-size: 0.9rem !important;
+        height: 50px !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("💊 Sessão de Spravato (Esketamina)")
+st.title("💊 Sessão de Spravatto (Esketamina)")
 st.markdown("Registro detalhado das sessões de tratamento.")
 
 with st.sidebar:
@@ -144,6 +194,7 @@ with st.container(border=True):
             change_month(-1)
             st.rerun()
     with col_title:
+        # Use explicit calendar.month_name to avoid potential local variable shadowing (though none exists)
         month_name = calendar.month_name[st.session_state.cal_month]
         st.markdown(f"<h3 style='text-align: center; margin: 0;'>{month_name} {st.session_state.cal_year}</h3>", unsafe_allow_html=True)
     with col_next:
