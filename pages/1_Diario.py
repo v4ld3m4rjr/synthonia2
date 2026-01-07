@@ -3,12 +3,18 @@ import datetime
 import json
 import os
 import time
+import calendar
 
 st.set_page_config(page_title="Diário | Synthonia", page_icon="📖", layout="centered")
 
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
+    /* Hide Streamlit Toolbar */
+    [data-testid="stToolbar"] {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Button Styling */
     div.stButton > button {
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
@@ -17,12 +23,21 @@ st.markdown("""
         border-radius: 12px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
     }
     div.stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
     }
+    
+    /* Calendar Button Specifics */
+    .calendar-btn {
+        padding: 5px !important;
+        font-size: 0.9rem !important;
+        height: 50px !important;
+    }
+    
     .journal-entry {
         background-color: rgba(30, 41, 59, 0.5);
         padding: 20px;
@@ -49,68 +64,116 @@ def save_journal(data):
     with open(JOURNAL_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-journal_data = load_journal()
+if 'journal_data' not in st.session_state:
+    st.session_state.journal_data = load_journal()
 
-# --- SIDEBAR: CALENDAR & SEARCH ---
+# --- CALENDAR LOGIC ---
+if 'cal_year' not in st.session_state:
+    st.session_state.cal_year = datetime.date.today().year
+if 'cal_month' not in st.session_state:
+    st.session_state.cal_month = datetime.date.today().month
+if 'selected_date' not in st.session_state:
+    st.session_state.selected_date = datetime.date.today()
+
+def change_month(delta):
+    m = st.session_state.cal_month + delta
+    y = st.session_state.cal_year
+    if m > 12:
+        m = 1
+        y += 1
+    elif m < 1:
+        m = 12
+        y -= 1
+    st.session_state.cal_month = m
+    st.session_state.cal_year = y
+
+def select_day(d):
+    st.session_state.selected_date = datetime.date(st.session_state.cal_year, st.session_state.cal_month, d)
+
+# --- CALENDAR UI ---
+with st.container(border=True):
+    col_prev, col_title, col_next = st.columns([1, 3, 1])
+    with col_prev:
+        if st.button("◀", key="prev_month"):
+            change_month(-1)
+            st.rerun()
+    with col_title:
+        month_name = calendar.month_name[st.session_state.cal_month]
+        st.markdown(f"<h3 style='text-align: center; margin: 0;'>{month_name} {st.session_state.cal_year}</h3>", unsafe_allow_html=True)
+    with col_next:
+        if st.button("▶", key="next_month"):
+            change_month(1)
+            st.rerun()
+    
+    # Weekday Headers
+    cols = st.columns(7)
+    days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    for i, day in enumerate(days):
+        cols[i].markdown(f"<div style='text-align: center; font-weight: bold;'>{day}</div>", unsafe_allow_html=True)
+    
+    # Days Grid
+    cal = calendar.monthcalendar(st.session_state.cal_year, st.session_state.cal_month)
+    for week in cal:
+        cols = st.columns(7)
+        for i, day in enumerate(week):
+            if day == 0:
+                cols[i].write("")
+            else:
+                date_key = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
+                has_entry = date_key in st.session_state.journal_data and st.session_state.journal_data[date_key].strip() != ""
+                
+                # Visual Indicator (Green if entry exists)
+                label = f"{day} ✅" if has_entry else f"{day}"
+                
+                if cols[i].button(label, key=f"day_{day}", use_container_width=True):
+                    select_day(day)
+                    st.rerun()
+
+# --- EDITOR AREA ---
+st.markdown("---")
+current_date_str = st.session_state.selected_date.strftime("%Y-%m-%d")
+display_date = st.session_state.selected_date.strftime("%d/%m/%Y")
+
+st.subheader(f"📝 Entrada de: {display_date}")
+
+current_content = st.session_state.journal_data.get(current_date_str, "")
+
+# Editor
+new_content = st.text_area(
+    "Escreva seus pensamentos...", 
+    value=current_content, 
+    height=300,
+    placeholder="Como você está se sentindo hoje?",
+    key=f"editor_{current_date_str}" 
+)
+
+# Manual Save Button
+if st.button("💾 Gravar Anotação", type="primary"):
+    if new_content.strip():
+        st.session_state.journal_data[current_date_str] = new_content
+    else:
+        # If empty, remove entry? Or just save empty.
+        if current_date_str in st.session_state.journal_data:
+            del st.session_state.journal_data[current_date_str]
+            
+    save_journal(st.session_state.journal_data)
+    st.success("Diário salvo com sucesso!")
+    time.sleep(1)
+    st.rerun()
+
+# --- HISTORICAL SEARCH (Sidebar) ---
 with st.sidebar:
-    st.header("Navegação")
-    selected_date = st.date_input("Selecionar Data", datetime.date.today())
-    date_str = selected_date.strftime("%Y-%m-%d")
-    
-    st.markdown("---")
-    st.subheader("Busca")
-    search_query = st.text_input("Buscar no diário...")
-
-# --- MAIN CONTENT ---
-
-# 1. Search Mode
-if search_query:
-    st.subheader(f"Resultados para: '{search_query}'")
-    found = False
-    for d, content in sorted(journal_data.items(), reverse=True):
-        if search_query.lower() in content.lower():
-            found = True
-            with st.container():
-                st.markdown(f"### 📅 {d}")
-                st.markdown(f"<div class='journal-entry'>{content}</div>", unsafe_allow_html=True)
-                if st.button(f"Editar {d}", key=f"edit_{d}"):
-                    # Logic to jump to date would require rerunning with new state, simplified here
-                    st.info(f"Selecione a data {d} no menu lateral para editar.")
-    if not found:
-        st.warning("Nenhuma entrada encontrada.")
-
-# 2. Editor Mode (Default)
-else:
-    st.subheader(f"Entrada de: {selected_date.strftime('%d/%m/%Y')}")
-    
-    current_content = journal_data.get(date_str, "")
-    
-    # Autosave simulation: Streamlit reruns on change, so we save on every change if key is set
-    new_content = st.text_area(
-        "Escreva aqui...", 
-        value=current_content, 
-        height=400,
-        placeholder="Como você está se sentindo hoje? O que aconteceu?",
-        key="journal_editor"
-    )
-    
-    # Save Logic
-    if new_content != current_content:
-        journal_data[date_str] = new_content
-        save_journal(journal_data)
-        time.sleep(0.5) # Debounce simulation
-        st.toast("Alterações salvas automaticamente!", icon="💾")
-    
-    st.caption(f"Última modificação: {datetime.datetime.now().strftime('%H:%M:%S')}")
-    
-    # Historical Context (Previous Entry)
-    st.markdown("---")
-    st.subheader("Histórico Recente")
-    
-    sorted_dates = sorted(journal_data.keys(), reverse=True)
-    count = 0
-    for d in sorted_dates:
-        if d != date_str and count < 3:
-            with st.expander(f"📅 {d}"):
-                st.write(journal_data[d])
-            count += 1
+    st.header("Busca")
+    search_query = st.text_input("Palavra-chave...")
+    if search_query:
+        st.markdown("---")
+        for d, content in sorted(st.session_state.journal_data.items(), reverse=True):
+            if search_query.lower() in content.lower():
+                with st.expander(f"📅 {d}"):
+                    st.write(content)
+                    if st.button("Ir", key=f"go_{d}"):
+                        y, m, day = map(int, d.split("-"))
+                        st.session_state.cal_year = y
+                        st.session_state.cal_month = m
+                        st.session_state.selected_date = datetime.date(y, m, day)
+                        st.rerun()

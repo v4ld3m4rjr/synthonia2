@@ -12,6 +12,10 @@ st.set_page_config(
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
+    /* Hide Streamlit Toolbar (Menu Superior Direito) */
+    [data-testid="stToolbar"] {visibility: hidden;}
+    footer {visibility: hidden;}
+    
     /* Remover padding padrão */
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
@@ -62,11 +66,9 @@ st.markdown("""
 # --- HEADER ---
 col1, col2 = st.columns([1, 4])
 with col1:
-    # Logo Logic: Tries to find assets/logo.png
     if os.path.exists("assets/logo.png"):
         st.image("assets/logo.png", width=120)
     else:
-        # Fallback if image not found
         st.markdown("<div style='font-size: 4rem; text-align: center;'>🧠</div>", unsafe_allow_html=True)
         
 with col2:
@@ -78,44 +80,50 @@ st.markdown("---")
 # --- NAVIGATION GRID ---
 st.subheader("Módulos Principais")
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5) # Changed to 5 columns to fit Check-in
 
 with c1:
     with st.container(border=True):
-        st.markdown("## 📖")
-        st.markdown("**Diário Pessoal**")
-        st.caption("Registre suas experiências e memórias.")
-        st.page_link("pages/1_Diario.py", label="Abrir Diário", icon="👉", use_container_width=True)
+        st.markdown("## ✅")
+        st.markdown("**Check-in**")
+        st.caption("Métricas diárias rápidas.")
+        st.page_link("pages/1_Checkin.py", label="Registrar", icon="👉", use_container_width=True)
 
 with c2:
     with st.container(border=True):
-        st.markdown("## 📋")
-        st.markdown("**Questionários**") # Label mantido como solicitado
-        st.caption("Semanal, Mensal e Trimestral.")
-        st.page_link("pages/2_Questionarios.py", label="Questionários", icon="👉", use_container_width=True)
+        st.markdown("## 📖")
+        st.markdown("**Diário**")
+        st.caption("Notas e memórias.")
+        st.page_link("pages/1_Diario.py", label="Abrir Diário", icon="👉", use_container_width=True)
 
 with c3:
     with st.container(border=True):
-        st.markdown("## 💊")
-        st.markdown("**Spravato**")
-        st.caption("Sessões e fenomenologia.")
-        st.page_link("pages/3_Spravato.py", label="Acessar Módulo", icon="👉", use_container_width=True)
+        st.markdown("## 📋")
+        st.markdown("**Questionários**")
+        st.caption("Avaliações periódicas.")
+        st.page_link("pages/2_Questionarios.py", label="Avaliar", icon="👉", use_container_width=True)
 
 with c4:
     with st.container(border=True):
+        st.markdown("## 💊")
+        st.markdown("**Spravato**")
+        st.caption("Sessões e efeitos.")
+        st.page_link("pages/3_Spravato.py", label="Acessar", icon="👉", use_container_width=True)
+
+with c5:
+    with st.container(border=True):
         st.markdown("## 📈")
         st.markdown("**Dashboard**")
-        st.caption("Análise de dados integrados.")
-        st.page_link("pages/4_Dashboard.py", label="Ver Gráficos", icon="👉", use_container_width=True)
+        st.caption("Análise de dados.")
+        st.page_link("pages/4_Dashboard.py", label="Visualizar", icon="👉", use_container_width=True)
 
 # --- FOOTER ---
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("© 2026 Synthonia v3.0")
+st.caption("© 2026 Synthonia v3.1")
 
 # --- SIDEBAR ---
 with st.sidebar:
     if os.path.exists("assets/logo.png"):
-        # Centralized sidebar logo
         st.markdown('<div class="logo-container">', unsafe_allow_html=True)
         st.image("assets/logo.png", width=150)
         st.markdown('</div>', unsafe_allow_html=True)
