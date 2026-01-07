@@ -94,3 +94,13 @@ def login_user(email, password):
         return res, None
     except Exception as e:
         return None, str(e)
+
+def send_password_reset(email):
+    if USE_MOCK:
+        return True, "Email de recuperação enviado (Mock)!"
+    
+    try:
+        supabase.auth.reset_password_email(email)
+        return True, "Email de recuperação enviado! Verifique sua caixa de entrada."
+    except Exception as e:
+        return False, str(e)

@@ -113,48 +113,120 @@ def login_screen():
     st.title("Synthonia")
     st.markdown("### Acesso ao Sistema")
     
-    tab1, tab2 = st.tabs(["Sou Paciente", "Sou Médico"])
+    # Abas principais
+    tab_login, tab_cadastro = st.tabs(["🔐 Login", "📝 Cadastro"])
     
-    with tab1:
-        with st.form("login_paciente"):
-            st.write("Selecione seu médico responsável:")
-            medicos = ["Selecione...", "Dr. Silva (Psiquiatra)", "Dra. Santos (Neurologista)", "Dr. Oliveira (Terapeuta)"]
-            medico_selecionado = st.selectbox("Médico", medicos)
+    # --- LOGIN TAB ---
+    with tab_login:
+        subtab_paciente, subtab_medico = st.tabs(["Sou Paciente", "Sou Médico/Admin"])
+        
+        with subtab_paciente:
+            with st.form("login_paciente"):
+                email = st.text_input("Email")
+                password = st.text_input("Senha", type="password")
+                
+                submit = st.form_submit_button("Entrar", use_container_width=True)
+                
+                if submit:
+                    res, error = auth.login_user(email, password)
+                    if res:
+                        st.session_state.logged_in = True
+                        st.session_state.role = "patient"
+                        st.session_state.user_name = res.user.user_metadata.get('full_name', email)
+                        st.session_state.medico = res.user.user_metadata.get('medico', 'N/A')
+                        st.success("Login realizado com sucesso!")
+                        st.rerun()
+                    else:
+                        st.error(f"Erro no login: {error}")
             
-            nome_paciente = st.text_input("Seu Nome")
-            
-            submit_paciente = st.form_submit_button("Entrar como Paciente", use_container_width=True)
-            
-            if submit_paciente:
-                if medico_selecionado == "Selecione...":
-                    st.error("⚠️ Você deve selecionar um médico responsável para continuar.")
-                elif not nome_paciente:
-                    st.error("⚠️ Por favor, insira seu nome.")
-                else:
-                    st.session_state.logged_in = True
-                    st.session_state.role = "patient"
-                    st.session_state.user_name = nome_paciente
-                    st.session_state.medico = medico_selecionado
-                    st.success("Login realizado com sucesso!")
-                    st.rerun()
+            # Forgot Password UI
+            with st.expander("Esqueci minha senha"):
+                st.write("Digite seu email para receber um link de redefinição.")
+                reset_email = st.text_input("Email para recuperação")
+                if st.button("Enviar Email de Recuperação"):
+                    if not reset_email:
+                        st.error("Por favor, insira um email.")
+                    elif not auth.is_valid_email(reset_email):
+                        st.error("Email inválido.")
+                    else:
+                        success, msg = auth.send_password_reset(reset_email)
+                        if success:
+                            st.success(msg)
+                        else:
+                            st.error(msg)
+
+        with subtab_medico:
+            with st.form("login_medico"):
+                email_med = st.text_input("Email / Usuário")
+                pass_med = st.text_input("Senha", type="password")
+                
+                submit_med = st.form_submit_button("Acessar Painel Profissional", use_container_width=True)
+                
+                if submit_med:
+                    # Admin Hardcoded Check first (handled in auth_service but explicit here for clarity if needed)
+                    res, error = auth.login_user(email_med, pass_med)
                     
-    with tab2:
-        with st.form("login_medico"):
-            st.write("Acesso Profissional")
-            crm = st.text_input("CRM / Registro Profissional")
-            senha = st.text_input("Senha", type="password")
+                    if res:
+                        role = res.user.user_metadata.get('role', 'doctor')
+                        if role in ['admin', 'doctor']:
+                            st.session_state.logged_in = True
+                            st.session_state.role = role
+                            st.session_state.user_name = res.user.user_metadata.get('full_name', email_med)
+                            st.success(f"Bem-vindo, {st.session_state.user_name}!")
+                            st.rerun()
+                        else:
+                            st.error("Esta conta não tem permissão de acesso médico.")
+                    else:
+                        st.error(f"Erro: {error}")
+
+    # --- REGISTRATION TAB ---
+    with tab_cadastro:
+        type_register = st.radio("Tipo de Cadastro", ["Paciente", "Médico"])
+        
+        if type_register == "Médico":
+            st.info("ℹ️ O cadastro de médicos é restrito. Para solicitar acesso, entre em contato exclusivamente através do email: **valdemarjunior@gmail.com**")
             
-            submit_medico = st.form_submit_button("Acessar Dashboard Médico", use_container_width=True)
-            
-            if submit_medico:
-                if crm and senha == "admin": # Mock password
-                    st.session_state.logged_in = True
-                    st.session_state.role = "doctor"
-                    st.session_state.user_name = f"Dr(a). {crm}"
-                    st.success("Acesso autorizado!")
-                    st.rerun()
-                else:
-                    st.error("Credenciais inválidas (Dica: senha 'admin')")
+            with st.expander("Verificar disponibilidade de domínio (Opcional)"):
+                email_check = st.text_input("Digite seu email profissional para verificação")
+                if email_check:
+                    if not auth.is_valid_email(email_check):
+                        st.error("Formato de email inválido.")
+                    elif not email_check.endswith("@gmail.com"): # Exemplo de restrição
+                         st.warning("Cadastros automáticos estão desabilitados. Contate o administrador.")
+        
+        else:
+            with st.form("register_form"):
+                st.markdown("#### Cadastro de Paciente")
+                new_name = st.text_input("Nome Completo")
+                new_email = st.text_input("Email")
+                new_pass = st.text_input("Senha", type="password", help="Mínimo 8 caracteres, maiúscula, minúscula e número.")
+                confirm_pass = st.text_input("Confirmar Senha", type="password")
+                
+                medicos_disponiveis = ["Selecione...", "Dr. Silva (Psiquiatra)", "Dra. Santos (Neurologista)", "Dr. Oliveira (Terapeuta)"]
+                selected_medico = st.selectbox("Médico Responsável", medicos_disponiveis)
+                
+                submit_register = st.form_submit_button("Criar Conta", use_container_width=True)
+                
+                if submit_register:
+                    # Validations
+                    if not new_name or not new_email or not new_pass:
+                        st.error("Todos os campos são obrigatórios.")
+                    elif not auth.is_valid_email(new_email):
+                        st.error("Email inválido.")
+                    elif selected_medico == "Selecione...":
+                        st.error("Selecione um médico responsável.")
+                    elif new_pass != confirm_pass:
+                        st.error("As senhas não coincidem.")
+                    else:
+                        is_strong, msg = auth.check_password_strength(new_pass)
+                        if not is_strong:
+                            st.error(msg)
+                        else:
+                            success, message = auth.register_user(new_email, new_pass, new_name, "patient", selected_medico)
+                            if success:
+                                st.success(message)
+                            else:
+                                st.error(f"Erro ao cadastrar: {message}")
 
 # --- PATIENT HOME ---
 def patient_home():
