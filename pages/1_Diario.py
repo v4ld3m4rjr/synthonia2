@@ -7,15 +7,26 @@ import calendar
 
 st.set_page_config(page_title="Diário | Synthonia", page_icon="📖", layout="centered")
 
+BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
+
 # --- CUSTOM CSS ---
-st.markdown("""
+st.markdown(f"""
 <style>
     /* Hide Streamlit Toolbar */
-    [data-testid="stToolbar"] {visibility: hidden;}
-    footer {visibility: hidden;}
+    [data-testid="stToolbar"] {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+
+    /* Background */
+    [data-testid="stAppViewContainer"] {{
+        background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), 
+                          url("{BG_URL}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
 
     /* Button Styling */
-    div.stButton > button {
+    div.stButton > button {{
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
         border: none;
@@ -24,27 +35,27 @@ st.markdown("""
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         width: 100%;
-    }
-    div.stButton > button:hover {
+    }}
+    div.stButton > button:hover {{
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-    }
+    }}
     
     /* Calendar Button Specifics */
-    .calendar-btn {
+    .calendar-btn {{
         padding: 5px !important;
         font-size: 0.9rem !important;
         height: 50px !important;
-    }
+    }}
     
-    .journal-entry {
+    .journal-entry {{
         background-color: rgba(30, 41, 59, 0.5);
         padding: 20px;
         border-radius: 10px;
         border-left: 4px solid #0ea5e9;
         margin-bottom: 20px;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 

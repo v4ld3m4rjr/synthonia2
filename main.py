@@ -9,27 +9,31 @@ st.set_page_config(
     initial_sidebar_state="collapsed", 
 )
 
+# URLs dos Assets (Github Raw)
+LOGO_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/BAIXA_RESOLUCAO_ICONE_VALDEMARJR_COR_FUNDOTRANSPARENTE.png"
+BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
+
 # --- CUSTOM CSS ---
-st.markdown("""
+st.markdown(f"""
 <style>
     /* Hide Streamlit Toolbar (Menu Superior Direito) */
-    [data-testid="stToolbar"] {visibility: hidden;}
-    footer {visibility: hidden;}
+    [data-testid="stToolbar"] {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
     
     /* Remover padding padrão */
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    .block-container {{ padding-top: 2rem; padding-bottom: 2rem; }}
     
     /* Background */
-    [data-testid="stAppViewContainer"] {
-        background-image: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.95)), 
-                          url("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop");
+    [data-testid="stAppViewContainer"] {{
+        background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), 
+                          url("{BG_URL}");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-    }
+    }}
     
     /* Botões */
-    div.stButton > button {
+    div.stButton > button {{
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
         border: none;
@@ -38,38 +42,35 @@ st.markdown("""
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         width: 100%;
-    }
-    div.stButton > button:hover {
+    }}
+    div.stButton > button:hover {{
         transform: translateY(-2px);
         box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-    }
+    }}
     
     /* Logo Container */
-    .logo-container {
+    .logo-container {{
         display: flex;
         justify-content: center;
         margin-bottom: 20px;
-    }
+    }}
     
     /* Titles */
-    h1, h2, h3 { color: #f8fafc !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    h1, h2, h3 {{ color: #f8fafc !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }}
     
     /* Sidebar */
-    [data-testid="stSidebar"] {
+    [data-testid="stSidebar"] {{
         background-color: rgba(15, 23, 42, 0.9);
         border-right: 1px solid rgba(148, 163, 184, 0.1);
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
 # --- HEADER ---
 col1, col2 = st.columns([1, 4])
 with col1:
-    if os.path.exists("assets/logo.png"):
-        st.image("assets/logo.png", width=120)
-    else:
-        st.markdown("<div style='font-size: 4rem; text-align: center;'>🧠</div>", unsafe_allow_html=True)
+    st.image(LOGO_URL, width=120)
         
 with col2:
     st.title("Synthonia")
@@ -80,7 +81,7 @@ st.markdown("---")
 # --- NAVIGATION GRID ---
 st.subheader("Módulos Principais")
 
-c1, c2, c3, c4, c5 = st.columns(5) # Changed to 5 columns to fit Check-in
+c1, c2, c3, c4, c5 = st.columns(5)
 
 with c1:
     with st.container(border=True):
@@ -119,14 +120,13 @@ with c5:
 
 # --- FOOTER ---
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("© 2026 Synthonia v3.1")
+st.caption("© 2026 Synthonia v3.2")
 
 # --- SIDEBAR ---
 with st.sidebar:
-    if os.path.exists("assets/logo.png"):
-        st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-        st.image("assets/logo.png", width=150)
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+    st.image(LOGO_URL, width=150)
+    st.markdown('</div>', unsafe_allow_html=True)
         
     st.write("---")
     if st.button("Sair", icon="🚪"):

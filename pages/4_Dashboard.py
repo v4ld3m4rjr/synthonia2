@@ -6,14 +6,25 @@ from datetime import datetime, date
 
 st.set_page_config(page_title="Dashboard | Synthonia", page_icon="📈", layout="wide")
 
+BG_URL = "https://raw.githubusercontent.com/v4ld3m4rjr/synthonia2/main/download%20(30).png"
+
 # --- CUSTOM CSS ---
-st.markdown("""
+st.markdown(f"""
 <style>
     /* Hide Streamlit Toolbar */
-    [data-testid="stToolbar"] {visibility: hidden;}
-    footer {visibility: hidden;}
+    [data-testid="stToolbar"] {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
     
-    div.stButton > button {
+    /* Background */
+    [data-testid="stAppViewContainer"] {{
+        background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), 
+                          url("{BG_URL}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+
+    div.stButton > button {{
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
         border: none;
@@ -21,7 +32,7 @@ st.markdown("""
         border-radius: 12px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
