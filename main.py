@@ -202,7 +202,7 @@ def login_screen():
                 new_pass = st.text_input("Senha", type="password", help="Mínimo 8 caracteres, maiúscula, minúscula e número.")
                 confirm_pass = st.text_input("Confirmar Senha", type="password")
                 
-                medicos_disponiveis = ["Selecione...", "Dr. Silva (Psiquiatra)", "Dra. Santos (Neurologista)", "Dr. Oliveira (Terapeuta)"]
+                medicos_disponiveis = ["Selecione...", "Dr. Silva (Psiquiatra)", "Dra. Santos (Neurologista)", "Dr. Oliveira (Terapeuta)", "Dr. Jader (O Brabo) - Psiquiatria Intervencionista"]
                 selected_medico = st.selectbox("Médico Responsável", medicos_disponiveis)
                 
                 submit_register = st.form_submit_button("Criar Conta", use_container_width=True)

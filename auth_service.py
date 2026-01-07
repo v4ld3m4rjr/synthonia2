@@ -63,11 +63,24 @@ def register_user(email, password, name, role, medico=None):
         return False, str(e)
 
 def login_user(email, password):
-    # Hardcoded Admin Check
+    # Hardcoded Dr. Jader Check (Pre-registered Admin/Doctor)
     if email == "Dr.Jader_o_Brabo" and password == "87654321":
+        # Simulate Creation Log (would normally be in DB logs)
+        print(f"[LOG] Acesso de Médico Registrado: Dr. Jader (O Brabo) em {datetime.now()}")
+        
         return {
-            "user": {"email": email, "user_metadata": {"full_name": "Dr. Jader (Admin)", "role": "admin"}},
-            "session": "admin_token"
+            "user": {
+                "email": email, 
+                "user_metadata": {
+                    "full_name": "Dr. Jader (O Brabo)", 
+                    "role": "doctor",
+                    "specialty": "Psiquiatria Intervencionista",
+                    "crm": "CRM-SP 123456",
+                    "contact": "dr.jader@synthonia.com",
+                    "hours": "Seg-Sex 14h-20h"
+                }
+            },
+            "session": "jader_secure_token"
         }, None
 
     if USE_MOCK:
