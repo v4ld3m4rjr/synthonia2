@@ -84,7 +84,25 @@ def login_user(email, password):
         }, None
 
     if USE_MOCK:
-        # Mock Login
+        # Check Session State Mock Users first
+        if email in st.session_state.mock_users:
+            user_data = st.session_state.mock_users[email]
+            if user_data['password'] == password:
+                return {
+                    "user": {
+                        "email": email,
+                        "user_metadata": {
+                            "full_name": user_data['full_name'],
+                            "role": user_data['role'],
+                            "medico": user_data.get('medico', 'N/A')
+                        }
+                    },
+                    "session": f"mock_token_{email}"
+                }, None
+            else:
+                return None, "Senha incorreta (Mock)"
+
+        # Default Mock Fallback
         if password == "12345678":
             return {
                 "user": {
@@ -97,7 +115,7 @@ def login_user(email, password):
                 },
                 "session": "mock_token"
             }, None
-        return None, "Credenciais inválidas (Mock: use senha '12345678')"
+        return None, "Credenciais inválidas. (Mock: Se acabou de cadastrar, use sua senha. Senão, use '12345678')"
 
     try:
         res = supabase.auth.sign_in_with_password({
