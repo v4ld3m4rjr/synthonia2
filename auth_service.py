@@ -141,7 +141,14 @@ def login_user(email, password):
         })
         return res, None
     except Exception as e:
-        return None, str(e)
+        # Check specifically for connection errors to provide better feedback
+        error_msg = str(e)
+        print(f"[LOGIN ERROR] Supabase Auth Failed: {error_msg}")
+        
+        if "Failed to connect" in error_msg or "Max retries exceeded" in error_msg:
+             return None, "Erro de conexão com o servidor. Verifique sua internet."
+             
+        return None, f"Erro no login: {error_msg}"
 
 def send_password_reset(email):
     if USE_MOCK:
