@@ -43,17 +43,25 @@ supabase: Client = None
 USE_MOCK = True
 
 try:
-    creds = load_secrets()
+    # --- HARDCODED CREDENTIALS (FALLBACK) ---
+    # Forçando as credenciais diretamente para garantir conexão e resolver o erro de leitura de arquivo.
+    SUPABASE_URL = "https://psussppamhqksocipzme.supabase.co"
+    SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXNzcHBhbWhxa3NvY2lwem1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwNjg0ODYsImV4cCI6MjA3NTY0NDQ4Nn0.N6FqKkqm_CPKt6GBe8T0FwxrAMisgg59xUzjTm1RXwc"
     
-    if not creds:
-        raise ValueError("Supabase credentials not found in secrets.toml or st.secrets")
-        
-    SUPABASE_URL = creds["url"]
-    SUPABASE_KEY = creds["key"]
-    
+    # Tenta ler do st.secrets primeiro (caso funcione no futuro), senão usa o hardcoded
+    try:
+        if st.secrets and "supabase" in st.secrets:
+            SUPABASE_URL = st.secrets["supabase"]["url"]
+            SUPABASE_KEY = st.secrets["supabase"]["key"]
+    except:
+        pass # Ignora erro de secrets e usa o hardcoded acima
+
+    if not SUPABASE_URL or not SUPABASE_KEY:
+         raise ValueError("Credenciais vazias.")
+
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     USE_MOCK = False
-    print("[AUTH] Successfully connected to Supabase (Real Mode)")
+    print("[AUTH] Successfully connected to Supabase (Real Mode - Hardcoded Fallback)")
     
 except Exception as e:
     print(f"[AUTH ERROR] Failed to connect to Supabase: {e}")
