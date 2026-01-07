@@ -59,6 +59,19 @@ st.markdown(f"""
         border-left: 4px solid #0ea5e9;
         margin-bottom: 20px;
     }}
+    
+    /* Sidebar Logo Responsiveness */
+    [data-testid="stSidebar"] img {{
+        max-width: 100%;
+        height: auto;
+    }}
+    
+    /* Mobile/Tablet Adjustments */
+    @media (max-width: 768px) {{
+        .logo-container img {{
+            width: 50px !important;
+        }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -178,7 +191,7 @@ if st.button("💾 Gravar Anotação", type="primary"):
 # --- HISTORICAL SEARCH (Sidebar) ---
 with st.sidebar:
     st.image(LOGO_URL, width=77)
-    st.write("---")
+    # DIVIDER REMOVED HERE
     st.header("Busca")
     search_query = st.text_input("Palavra-chave...")
     if search_query:

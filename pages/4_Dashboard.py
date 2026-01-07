@@ -27,11 +27,31 @@ st.markdown(f"""
     div.stButton > button {{
         background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
         color: white;
-        border: none;
+        border: 1px solid #FFFFFF;
         padding: 10px 24px;
-        border-radius: 12px;
+        border-radius: 25px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+    }}
+    div.stButton > button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+        border-color: #f8fafc;
+    }}
+    
+    /* Sidebar Logo Responsiveness */
+    [data-testid="stSidebar"] img {{
+        max-width: 100%;
+        height: auto;
+    }}
+    
+    /* Mobile/Tablet Adjustments */
+    @media (max-width: 768px) {{
+        .logo-container img {{
+            width: 50px !important;
+        }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -75,7 +95,7 @@ df = get_data()
 # --- SIDEBAR & FILTERS ---
 with st.sidebar:
     st.image(LOGO_URL, width=77)
-    st.write("---")
+    # DIVIDER REMOVED HERE
     st.header("Visualização")
     
     # Date Filter

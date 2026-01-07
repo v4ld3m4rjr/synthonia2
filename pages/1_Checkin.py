@@ -38,6 +38,19 @@ st.markdown(f"""
         background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
         border-color: #f8fafc;
     }}
+    
+    /* Sidebar Logo Responsiveness */
+    [data-testid="stSidebar"] img {{
+        max-width: 100%;
+        height: auto;
+    }}
+    
+    /* Mobile/Tablet Adjustments */
+    @media (max-width: 768px) {{
+        .logo-container img {{
+            width: 50px !important;
+        }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +59,7 @@ st.markdown("Monitoramento de métricas diárias essenciais.")
 
 with st.sidebar:
     st.image(LOGO_URL, width=77)
-    st.write("---")
+    # DIVIDER REMOVED HERE
 
 with st.form("checkin_form_completo"):
     st.subheader("1. Estado Mental & Emocional")

@@ -50,6 +50,19 @@ st.markdown(f"""
     .weekly {{ background-color: #10b981; color: white; }} /* Verde */
     .monthly {{ background-color: #f59e0b; color: white; }} /* Laranja */
     .quarterly {{ background-color: #ef4444; color: white; }} /* Vermelho */
+    
+    /* Sidebar Logo Responsiveness */
+    [data-testid="stSidebar"] img {{
+        max-width: 100%;
+        height: auto;
+    }}
+    
+    /* Mobile/Tablet Adjustments */
+    @media (max-width: 768px) {{
+        .logo-container img {{
+            width: 50px !important;
+        }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,7 +71,7 @@ st.markdown("Monitoramento periódico com alertas automáticos.")
 
 with st.sidebar:
     st.image(LOGO_URL, width=77)
-    st.write("---")
+    # DIVIDER REMOVED HERE
 
 # --- NOTIFICATION SYSTEM (MOCKED) ---
 # Em produção, isso viria do banco de dados (data da última resposta)
