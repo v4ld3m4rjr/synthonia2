@@ -40,8 +40,15 @@ def check_password_strength(password):
 
 def register_user(email, password, name, role, medico=None):
     if USE_MOCK:
-        # Mock registration
-        return True, "Cadastro realizado com sucesso (Mock)!"
+        _ensure_mock_db()
+        # Save to session state for temporary testing
+        st.session_state.mock_users[email] = {
+            "password": password,
+            "full_name": name,
+            "role": role,
+            "medico": medico
+        }
+        return True, f"Cadastro realizado com sucesso (Mock)! Aviso: Banco de dados offline. Motivo: {INIT_ERROR}"
     
     try:
         # 1. Sign up user in Auth

@@ -453,4 +453,4 @@ else:
 
 # --- FOOTER ---
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("© 2026 Synthonia v3.2")
+st.caption("© 2026 Synthonia v3.3 - Connected Health")
