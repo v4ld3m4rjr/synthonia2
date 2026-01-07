@@ -3,6 +3,26 @@ import datetime
 
 st.set_page_config(page_title="Check-in | Synthonia", page_icon="📝", layout="centered")
 
+# --- CUSTOM CSS ---
+st.markdown("""
+<style>
+    div.stButton > button {
+        background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📝 Check-in Diário Completo")
 st.markdown("Monitoramento detalhado de saúde e bem-estar.")
 

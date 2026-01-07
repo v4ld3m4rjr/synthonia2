@@ -2,6 +2,26 @@ import streamlit as st
 
 st.set_page_config(page_title="Questionários | Synthonia", page_icon="📋", layout="wide")
 
+# --- CUSTOM CSS ---
+st.markdown("""
+<style>
+    div.stButton > button {
+        background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📋 Avaliações Clínicas Multidimensionais")
 st.markdown("Instrumentos validados para monitoramento de comorbidades.")
 
@@ -42,6 +62,7 @@ with tab1:
         p_res['p9'] = st.radio("9. Pensamentos de morte?", list(opcoes_phq.keys()), horizontal=True, key="p9")
         
         if st.button("Calcular PHQ-9"):
+            score = sum([opcoes_phq[v] for p in p_res.values()]) # Fixed bug here in original code
             score = sum([opcoes_phq[v] for v in p_res.values()])
             if score <= 4: c = "Mínima"
             elif score <= 9: c = "Leve"

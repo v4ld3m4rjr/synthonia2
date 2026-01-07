@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import os
 
 # Configuração da Página
 st.set_page_config(
@@ -9,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed", # Começar colapsado para foco no dashboard
 )
 
-# Custom CSS para Visual Fotográfico e Moderno
+# --- CUSTOM CSS (Estilização Global) ---
 st.markdown("""
 <style>
     /* Remover padding padrão excessivo */
@@ -27,6 +28,42 @@ st.markdown("""
         background-attachment: fixed;
     }
     
+    /* --- BOTÕES ESTILIZADOS --- */
+    div.stButton > button {
+        background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        font-weight: 600;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+    }
+    
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+    }
+    
+    div.stButton > button:active {
+        transform: translateY(1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Botões Secundários (Outline) */
+    div[data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
     /* Estilo dos Cards (Botões Dinâmicos) */
     .dashboard-card {
         background-color: rgba(30, 41, 59, 0.7);
@@ -85,8 +122,11 @@ st.markdown("""
 col1, col2 = st.columns([1, 4])
 
 with col1:
-    # Logo ou Ícone Grande
-    st.markdown("<div style='font-size: 4rem; text-align: center;'>🧠</div>", unsafe_allow_html=True)
+    # Logo
+    if os.path.exists("assets/logo.png"):
+        st.image("assets/logo.png", width=150)
+    else:
+        st.markdown("<div style='font-size: 4rem; text-align: center;'>🧠</div>", unsafe_allow_html=True)
 
 with col2:
     st.title("Synthonia")
@@ -100,20 +140,6 @@ st.markdown("---")
 st.subheader("Acesso Rápido")
 
 col_a, col_b, col_c, col_d = st.columns(4)
-
-# Helper function to create card HTML (Visual Only - Click handled by st.page_link below)
-def card_html(icon, title, desc):
-    return f"""
-    <div class="dashboard-card">
-        <div class="card-icon">{icon}</div>
-        <div class="card-title">{title}</div>
-        <div class="card-desc">{desc}</div>
-    </div>
-    """
-
-# Note: Streamlit buttons cannot wrap HTML easily. 
-# We will use st.page_link for native navigation which is cleaner and faster.
-# To make them look like cards, we can use a container with a border.
 
 with col_a:
     with st.container(border=True):
@@ -138,10 +164,10 @@ with col_c:
 
 with col_d:
     with st.container(border=True):
-        st.markdown("## 📋")
-        st.markdown("**Questionários**")
-        st.caption("Avaliações clínicas periódicas.")
-        st.page_link("pages/4_Questionarios.py", label="Acessar Questionários", icon="👉", use_container_width=True)
+        st.markdown("## 📉")
+        st.markdown("**Dashboard Clínico**")
+        st.caption("Análise de dados e gráficos.")
+        st.page_link("pages/5_Dashboard_Clinico.py", label="Ver Gráficos", icon="👉", use_container_width=True)
 
 # --- Status & Metrics Overview (Simulado) ---
 st.markdown("---")
@@ -164,8 +190,14 @@ st.caption("© 2026 Synthonia System v2.0 | Powered by Streamlit & Python")
 
 # Sidebar
 with st.sidebar:
+    if os.path.exists("assets/logo.png"):
+        st.image("assets/logo.png", use_container_width=True)
     st.header("Menu Principal")
     st.write("Navegue pelos módulos usando o dashboard ou este menu.")
+    
+    st.page_link("pages/4_Questionarios.py", label="Questionários", icon="📋")
+    
+    st.markdown("---")
     if st.button("Logout", icon="🚪"):
         st.session_state.clear()
         st.rerun()
