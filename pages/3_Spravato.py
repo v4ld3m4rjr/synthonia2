@@ -102,8 +102,106 @@ with st.form("spravato_form"):
     
     if submit_spravato:
         score_cadss = sum([c1, c2, c3, c4, c5, c6])
-        st.success(f"Sessão de {data_sessao} registrada!")
+        
+        # Save Session Data
+        session_record = {
+            "dose": dose,
+            "hrv": hrv,
+            "pa_inicial": pa_inicial,
+            "pa_final": pa_final,
+            "fc_media": fc_media,
+            "cadss_score": score_cadss,
+            "cadss_details": [c1, c2, c3, c4, c5, c6],
+            "efeitos": efeitos,
+            "outros_efeitos": outros_efeitos,
+            "satisfacao": satisfacao,
+            "func_global": func_global,
+            "insights": insights,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
+        date_key = data_sessao.strftime("%Y-%m-%d")
+        st.session_state.spravato_data[date_key] = session_record
+        save_spravato_data(st.session_state.spravato_data)
+        
+        st.success(f"Sessão de {data_sessao} registrada e salva no calendário!")
         st.info(f"Score CADSS-6 (Dissociação): {score_cadss}/24")
         
         if "Náusea" in efeitos or "Vômito" in efeitos:
             st.warning("⚠️ Lembrete de Jejum: Reforce o jejum de 2h (alimentos) e 30min (líquidos) na próxima sessão.")
+            
+        time.sleep(1.5)
+        st.rerun()
+
+st.markdown("---")
+st.header("📅 Histórico de Sessões")
+
+# --- CALENDAR UI ---
+with st.container(border=True):
+    col_prev, col_title, col_next = st.columns([1, 3, 1])
+    with col_prev:
+        if st.button("◀", key="prev_month"):
+            change_month(-1)
+            st.rerun()
+    with col_title:
+        month_name = calendar.month_name[st.session_state.cal_month]
+        st.markdown(f"<h3 style='text-align: center; margin: 0;'>{month_name} {st.session_state.cal_year}</h3>", unsafe_allow_html=True)
+    with col_next:
+        if st.button("▶", key="next_month"):
+            change_month(1)
+            st.rerun()
+    
+    # Weekday Headers
+    cols = st.columns(7)
+    days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    for i, day in enumerate(days):
+        cols[i].markdown(f"<div style='text-align: center; font-weight: bold;'>{day}</div>", unsafe_allow_html=True)
+    
+    # Days Grid
+    cal = calendar.monthcalendar(st.session_state.cal_year, st.session_state.cal_month)
+    for week in cal:
+        cols = st.columns(7)
+        for i, day in enumerate(week):
+            if day == 0:
+                cols[i].write("")
+            else:
+                date_key = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
+                has_entry = date_key in st.session_state.spravato_data
+                
+                # Visual Indicator (Green Pill if entry exists)
+                label = f"{day} 💊" if has_entry else f"{day}"
+                
+                if cols[i].button(label, key=f"day_{day}", use_container_width=True):
+                    select_day(day)
+                    st.rerun()
+
+# --- SESSION DETAILS VIEW ---
+selected_date_str = st.session_state.selected_date.strftime("%Y-%m-%d")
+display_date = st.session_state.selected_date.strftime("%d/%m/%Y")
+
+if selected_date_str in st.session_state.spravato_data:
+    data = st.session_state.spravato_data[selected_date_str]
+    
+    st.subheader(f"Detalhes da Sessão: {display_date}")
+    
+    with st.container(border=True):
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Dosagem", data.get("dose", "N/A"))
+        c2.metric("HRV", f"{data.get('hrv', 0)} ms")
+        c3.metric("CADSS-6", f"{data.get('cadss_score', 0)}/24")
+        
+        c4, c5 = st.columns(2)
+        c4.metric("PA Inicial", data.get("pa_inicial", "N/A"))
+        c5.metric("PA Final", data.get("pa_final", "N/A"))
+        
+        st.markdown("**Efeitos Adversos:**")
+        if data.get("efeitos"):
+            st.write(", ".join(data["efeitos"]))
+        else:
+            st.write("Nenhum registrado.")
+            
+        if data.get("insights"):
+            st.markdown("**Insights:**")
+            st.info(data["insights"])
+else:
+    st.info(f"Nenhuma sessão registrada em {display_date}.")
