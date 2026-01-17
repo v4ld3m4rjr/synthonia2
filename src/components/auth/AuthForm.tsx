@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useNavigate } from 'react-router-dom';
+import { Target, Mail, Lock, User, MoreHorizontal } from 'lucide-react';
 
 const loginSchema = z.object({
     email: z.string().email('Email inválido'),
@@ -15,19 +16,11 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
     email: z.string().email('Email inválido'),
-    confirmEmail: z.string().email('Email inválido'),
     password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
-    confirmPassword: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
     fullName: z.string().min(2, 'Nome é obrigatório'),
-    role: z.enum(['subject', 'doctor', 'coach']),
-    doctorId: z.string().optional(),
-    coachId: z.string().optional(),
-}).refine((data) => data.email === data.confirmEmail, {
-    message: "Os emails não coincidem",
-    path: ["confirmEmail"],
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "As senhas não coincidem",
-    path: ["confirmPassword"],
+}).refine((data) => data.password.length >= 6, {
+    message: "A senha deve ter no mínimo 6 caracteres",
+    path: ["password"],
 });
 
 type AuthFormData = z.infer<typeof signupSchema>;
@@ -36,46 +29,11 @@ export function AuthForm() {
     const [isLogin, setIsLogin] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [doctors, setDoctors] = useState<{ id: string, full_name: string }[]>([]);
-    const [coaches, setCoaches] = useState<{ id: string, full_name: string }[]>([]);
     const navigate = useNavigate();
 
-    const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
+    const { register, handleSubmit, formState: { errors } } = useForm<any>({
         resolver: zodResolver(isLogin ? loginSchema : signupSchema),
-        defaultValues: {
-            role: 'subject'
-        }
     });
-
-    const selectedRole = watch('role');
-
-    useEffect(() => {
-        if (!isLogin && selectedRole === 'subject') {
-            const fetchPros = async () => {
-                try {
-                    // Fetch Doctors
-                    const { data: docs, error: docError } = await supabase
-                        .from('profiles')
-                        .select('id, full_name')
-                        .eq('role', 'doctor');
-                    
-                    if (!docError && docs) setDoctors(docs);
-
-                    // Fetch Coaches
-                    const { data: coachesData, error: coachError } = await supabase
-                        .from('profiles')
-                        .select('id, full_name')
-                        .eq('role', 'coach');
-                    
-                    if (!coachError && coachesData) setCoaches(coachesData);
-                } catch (err) {
-                    console.error('Erro ao buscar profissionais:', err);
-                    // Silently fail or set empty lists is better than crashing
-                }
-            };
-            fetchPros();
-        }
-    }, [isLogin, selectedRole]);
 
     const onSubmit = async (data: AuthFormData) => {
         setIsLoading(true);
@@ -96,9 +54,7 @@ export function AuthForm() {
                     options: {
                         data: {
                             full_name: data.fullName,
-                            role: data.role || 'subject',
-                            doctor_id: data.role === 'subject' && data.doctorId ? data.doctorId : null,
-                            coach_id: data.role === 'subject' && data.coachId ? data.coachId : null
+                            role: 'subject', // Default to subject for now
                         },
                     },
                 });
@@ -114,164 +70,111 @@ export function AuthForm() {
     };
 
     return (
-        <div className="w-full max-w-md space-y-8 p-8 bg-card rounded-xl shadow-lg border border-border">
-            <div className="text-center">
-                <h2 className="text-3xl font-bold tracking-tight text-foreground">
-                    {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta'}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                    {isLogin ? 'Entre para acessar a plataforma' : 'Monitoramento Integrativo de Saúde'}
-                </p>
+        <div className="w-full max-w-[400px] flex flex-col items-center">
+            {/* Logo */}
+            <div className="mb-8 flex flex-col items-center gap-4">
+                <div className="relative flex items-center justify-center w-16 h-16 rounded-full border border-white/20">
+                    <div className="absolute inset-0 rounded-full border border-white/10 animate-pulse" />
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                        <div className="w-3 h-3 bg-black rounded-full" />
+                    </div>
+                </div>
+                <h1 className="text-2xl font-light tracking-[0.2em] text-white">SYNTHONIA</h1>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Tab Switcher */}
+            <div className="w-full grid grid-cols-2 p-1 bg-zinc-900/50 rounded-lg mb-8 border border-white/5">
+                <button
+                    onClick={() => setIsLogin(true)}
+                    className={`text-sm font-medium py-2.5 rounded-md transition-all duration-300 ${isLogin
+                            ? 'bg-zinc-800 text-white shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                >
+                    Entrar
+                </button>
+                <button
+                    onClick={() => setIsLogin(false)}
+                    className={`text-sm font-medium py-2.5 rounded-md transition-all duration-300 ${!isLogin
+                            ? 'bg-zinc-800 text-white shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                >
+                    Cadastrar
+                </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-5">
                 {!isLogin && (
-                    <>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none">
-                                Nome Completo
-                            </label>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+                            NOME
+                        </label>
+                        <div className="relative group">
                             <Input
                                 {...register('fullName')}
-                                placeholder="Seu nome"
-                                className={errors.fullName ? 'border-destructive' : ''}
+                                placeholder="Seu nome completo"
+                                className="bg-zinc-900/50 border-white/10 text-white placeholder:text-zinc-600 pl-4 h-11 focus:border-white/30 transition-all rounded-lg"
                             />
+                            <User className="absolute right-3 top-3 w-5 h-5 text-zinc-600 group-focus-within:text-zinc-400 transition-colors" />
                         </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none">
-                                Tipo de Conta
-                            </label>
-                            <select
-                                {...register('role')}
-                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            >
-                                <option value="subject">Sujeito (Paciente)</option>
-                                <option value="doctor">Médico</option>
-                                <option value="coach">Treinador</option>
-                            </select>
-                        </div>
-
-                        {selectedRole === 'subject' && (
-                            <>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium leading-none">
-                                        Selecione seu Médico (Opcional)
-                                    </label>
-                                    <select
-                                        {...register('doctorId')}
-                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    >
-                                        <option value="">Selecione...</option>
-                                        {doctors.map(doc => (
-                                            <option key={doc.id} value={doc.id}>
-                                                {doc.full_name || 'Médico sem nome'}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium leading-none">
-                                        Selecione seu Treinador (Opcional)
-                                    </label>
-                                    <select
-                                        {...register('coachId')}
-                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    >
-                                        <option value="">Selecione...</option>
-                                        {coaches.map(c => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.full_name || 'Treinador sem nome'}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </>
-                        )}
-                    </>
+                        {errors.fullName && <p className="text-xs text-red-500 pl-1">{String(errors.fullName.message)}</p>}
+                    </div>
                 )}
 
-                <div className="space-y-2">
-                    <label className="text-sm font-medium leading-none">
-                        Email
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+                        E-MAIL
                     </label>
-                    <Input
-                        {...register('email')}
-                        type="email"
-                        placeholder="seu@email.com"
-                        autoComplete="email"
-                        className={errors.email ? 'border-destructive' : ''}
-                    />
-                    {errors.email && <p className="text-xs text-destructive">{String(errors.email.message)}</p>}
-                </div>
-
-                {!isLogin && (
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none">
-                            Confirmar Email
-                        </label>
+                    <div className="relative group">
                         <Input
-                            {...register('confirmEmail')}
+                            {...register('email')}
                             type="email"
-                            placeholder="Confirme seu email"
-                            autoComplete="email"
-                            className={errors.confirmEmail ? 'border-destructive' : ''}
+                            placeholder="seu@email.com"
+                            className="bg-zinc-900/50 border-white/10 text-white placeholder:text-zinc-600 pl-4 h-11 focus:border-white/30 transition-all rounded-lg"
                         />
-                        {errors.confirmEmail && <p className="text-xs text-destructive">{String(errors.confirmEmail.message)}</p>}
+                        <Mail className="absolute right-3 top-3 w-5 h-5 text-zinc-600 group-focus-within:text-zinc-400 transition-colors" />
                     </div>
-                )}
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium leading-none">
-                        Senha
-                    </label>
-                    <Input
-                        {...register('password')}
-                        type="password"
-                        placeholder="••••••"
-                        autoComplete="new-password"
-                        className={errors.password ? 'border-destructive' : ''}
-                    />
-                     {errors.password && <p className="text-xs text-destructive">{String(errors.password.message)}</p>}
+                    {errors.email && <p className="text-xs text-red-500 pl-1">{String(errors.email.message)}</p>}
                 </div>
 
-                {!isLogin && (
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none">
-                            Confirmar Senha
-                        </label>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+                        SENHA
+                    </label>
+                    <div className="relative group">
                         <Input
-                            {...register('confirmPassword')}
+                            {...register('password')}
                             type="password"
-                            placeholder="••••••"
-                            autoComplete="new-password"
-                            className={errors.confirmPassword ? 'border-destructive' : ''}
+                            placeholder="Sua senha"
+                            className="bg-zinc-900/50 border-white/10 text-white placeholder:text-zinc-600 pl-4 h-11 focus:border-white/30 transition-all rounded-lg"
                         />
-                        {errors.confirmPassword && <p className="text-xs text-destructive">{String(errors.confirmPassword.message)}</p>}
+                        <MoreHorizontal className="absolute right-3 top-3 w-5 h-5 text-zinc-600 group-focus-within:text-zinc-400 transition-colors" />
                     </div>
-                )}
+                    {errors.password && <p className="text-xs text-red-500 pl-1">{String(errors.password.message)}</p>}
+                </div>
 
                 {error && (
-                    <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+                    <div className="p-3 text-sm text-red-400 bg-red-950/20 border border-red-900/30 rounded-lg text-center">
                         {error}
                     </div>
                 )}
 
-                <Button type="submit" className="w-full" isLoading={isLoading}>
-                    {isLogin ? 'Entrar' : 'Cadastrar'}
-                </Button>
-            </form>
-
-            <div className="text-center">
                 <Button
-                    variant="link"
-                    onClick={() => setIsLogin(!isLogin)}
-                    className="text-sm text-muted-foreground hover:text-primary"
+                    type="submit"
+                    isLoading={isLoading}
+                    className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-semibold rounded-lg tracking-wide uppercase mt-4 transition-all"
                 >
-                    {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Entre'}
+                    {isLogin ? 'ENTRAR' : 'CADASTRAR'}
                 </Button>
-            </div>
+
+                <div className="text-center pt-2">
+                    <button type="button" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                        Esqueceu a senha?
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }
