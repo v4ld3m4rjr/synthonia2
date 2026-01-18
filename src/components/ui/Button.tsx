@@ -14,16 +14,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             <button
                 ref={ref}
                 className={cn(
-                    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                    "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium tracking-wide transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 disabled:pointer-events-none disabled:opacity-50 active:scale-95",
                     {
-                        'bg-primary text-primary-foreground hover:bg-primary/90': variant === 'default',
-                        'border border-input bg-background hover:bg-accent hover:text-accent-foreground': variant === 'outline',
-                        'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
-                        'text-primary underline-offset-4 hover:underline': variant === 'link',
-                        'h-10 px-4 py-2': size === 'default',
+                        'bg-white text-black hover:bg-zinc-200 shadow-[0_0_15px_rgba(255,255,255,0.1)]': variant === 'default',
+                        'border border-white/10 bg-zinc-900/50 hover:bg-white/10 hover:text-white': variant === 'outline',
+                        'hover:bg-white/5 hover:text-white': variant === 'ghost',
+                        'text-white underline-offset-4 hover:underline': variant === 'link',
+                        'h-11 px-6': size === 'default',
                         'h-9 rounded-md px-3': size === 'sm',
-                        'h-11 rounded-md px-8': size === 'lg',
-                        'h-10 w-10': size === 'icon',
+                        'h-12 rounded-md px-8': size === 'lg',
+                        'h-11 w-11': size === 'icon',
                     },
                     className
                 )}
